@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "project_id": "9cfa9f11-72f0-4d7f-b281-f1364ec68c44",
+  "project_name": "forest_blockout",
+  "source_blend": "/home/user/assets/forest_scene.blend",
+  "blender_executable": "/home/user/blender-5.1.0-linux-x64/blender",
+  "created_at": "2026-03-29T10:10:00+00:00",
+  "updated_at": "2026-03-29T10:25:30+00:00",
+  "collection_tree": [
+    {
+      "name": "vegetation",
+      "object_count": 0,
+      "children": [
+        {
+          "name": "pino",
+          "object_count": 12,
+          "children": []
+        },
+        {
+          "name": "arbusto",
+          "object_count": 8,
+          "children": []
+        }
+      ]
+    },
+    {
+      "name": "building",
+      "object_count": 0,
+      "children": [
+        {
+          "name": "cabana",
+          "object_count": 3,
+          "children": []
+        }
+      ]
+    }
+  ],
+  "map_settings": {
+    "logical_width": 200.0,
+    "logical_height": 200.0,
+    "logical_unit": "m",
+    "mask_width": 2048,
+    "mask_height": 2048
+  },
+  "layers": [
+    {
+      "layer_id": "vegetation/pino",
+      "name": "vegetation/pino",
+      "visible": true,
+      "opacity": 0.85,
+      "mask_data_path": "masks/000_vegetation_pino.png",
+      "color_hex": "#43b6ff"
+    },
+    {
+      "layer_id": "vegetation/arbusto",
+      "name": "vegetation/arbusto",
+      "visible": true,
+      "opacity": 0.85,
+      "mask_data_path": "masks/001_vegetation_arbusto.png",
+      "color_hex": "#f08a38"
+    }
+  ],
+  "generation_settings": {
+    "seed": null,
+    "randomize_seed": true
+  }
+}

@@ -32,6 +32,13 @@ class CollectionNode:
 
         return cls(name=raw_name, object_count=raw_object_count, children=children)
 
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "object_count": self.object_count,
+            "children": [child.to_dict() for child in self.children],
+        }
+
 
 @dataclass(slots=True)
 class BlendInspectionResult:
@@ -72,3 +79,11 @@ class BlendInspectionResult:
     def missing_expected_roots(self, expected_names: Iterable[str]) -> set[str]:
         expected = {name.lower() for name in expected_names}
         return expected - self.root_names_lower()
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "blend_file": self.blend_file,
+            "roots": [root.to_dict() for root in self.roots],
+            "total_collections": self.total_collections,
+            "warnings": list(self.warnings),
+        }
