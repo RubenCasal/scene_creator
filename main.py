@@ -15,7 +15,20 @@ def _bootstrap_path() -> None:
 
 def main() -> int:
     _bootstrap_path()
-    from proc_map_designer.app import run_app
+
+    try:
+        from proc_map_designer.app import run_app
+    except ModuleNotFoundError as exc:
+        if exc.name == "PySide6":
+            print(
+                "Missing dependency: PySide6\n"
+                "Install project dependencies in the Python environment that runs ./main.py:\n"
+                "  python -m pip install -r requirements.txt\n"
+                "Or activate the project virtualenv first, then run ./main.py.",
+                file=sys.stderr,
+            )
+            return 1
+        raise
 
     return run_app()
 

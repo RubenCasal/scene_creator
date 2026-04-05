@@ -49,7 +49,22 @@
       "visible": true,
       "opacity": 0.85,
       "mask_data_path": "masks/000_vegetation_pino.png",
-      "color_hex": "#43b6ff"
+      "color_hex": "#43b6ff",
+      "generation_settings": {
+        "enabled": true,
+        "density": 1.0,
+        "seed": null,
+        "allow_overlap": true,
+        "min_distance": 0.0,
+        "scale_min": 1.0,
+        "scale_max": 1.0,
+        "rotation_random_z": 180.0,
+        "priority": 0,
+        "bounding_radius": null,
+        "slope_limit_deg": null,
+        "max_count": null,
+        "align_to_surface_normal": null
+      }
     },
     {
       "layer_id": "vegetation/arbusto",
@@ -57,7 +72,22 @@
       "visible": true,
       "opacity": 0.85,
       "mask_data_path": "masks/001_vegetation_arbusto.png",
-      "color_hex": "#f08a38"
+      "color_hex": "#f08a38",
+      "generation_settings": {
+        "enabled": true,
+        "density": 1.0,
+        "seed": null,
+        "allow_overlap": true,
+        "min_distance": 0.0,
+        "scale_min": 1.0,
+        "scale_max": 1.0,
+        "rotation_random_z": 180.0,
+        "priority": 0,
+        "bounding_radius": null,
+        "slope_limit_deg": null,
+        "max_count": null,
+        "align_to_surface_normal": null
+      }
     }
   ],
   "generation_settings": {

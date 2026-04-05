@@ -43,6 +43,11 @@ def main() -> None:
     import bpy
 
     all_collections = list(bpy.data.collections)
+    base_plane_candidates = sorted(
+        obj.name
+        for obj in bpy.data.objects
+        if obj.type == "MESH" and obj.visible_get()
+    )
     scene_root = bpy.context.scene.collection
     root_collections = list(scene_root.children)
     roots = [_serialize_collection(collection, set()) for collection in root_collections]
@@ -69,6 +74,7 @@ def main() -> None:
         "roots": roots,
         "total_collections": len(reachable_names),
         "warnings": warnings,
+        "base_plane_candidates": base_plane_candidates,
     }
     _emit_json(payload)
 

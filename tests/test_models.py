@@ -36,10 +36,12 @@ class ModelsTestCase(unittest.TestCase):
                 "roots": [{"name": "building", "children": []}],
                 "total_collections": 3,
                 "warnings": [],
+                "base_plane_candidates": ["Plane", "Ground"],
             }
         )
         missing = result.missing_expected_roots({"vegetation", "building"})
         self.assertEqual(missing, {"vegetation"})
+        self.assertEqual(result.base_plane_candidates, ["Plane", "Ground"])
 
 
 if __name__ == "__main__":

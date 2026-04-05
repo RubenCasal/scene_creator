@@ -24,6 +24,7 @@ class MapSettingsDialog(QDialog):
         self.setWindowTitle("Configurar mapa")
         self.resize(620, 420)
         self._result = current
+        self._base_plane_object = current.base_plane_object
 
         layout = QVBoxLayout(self)
 
@@ -109,6 +110,7 @@ class MapSettingsDialog(QDialog):
             logical_unit=self.unit_combo.currentText().strip() or "m",
             mask_width=self.mask_width_spin.value(),
             mask_height=self.mask_height_spin.value(),
+            base_plane_object=self._base_plane_object,
         )
 
     def _on_accept(self) -> None:
@@ -121,4 +123,3 @@ class MapSettingsDialog(QDialog):
 
     def result_settings(self) -> MapSettings:
         return self._result
-

@@ -19,7 +19,7 @@ if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
 from proc_map_designer.domain.models import CollectionNode
-from proc_map_designer.domain.project_state import MapSettings
+from proc_map_designer.domain.project_state import LayerGenerationSettings, LayerState, MapSettings
 
 if PYSIDE6_AVAILABLE:
     from proc_map_designer.ui.canvas.brush_tool import BrushTool
@@ -160,6 +160,111 @@ class LayerMaskManagerTests(unittest.TestCase):
             assert restored_layer is not None
             alpha = restored_layer.mask_image.pixelColor(64, 64).alpha()  # type: ignore[union-attr]
             self.assertGreater(alpha, 0)
+
+    def test_export_grayscale_masks_creates_masks_directory(self) -> None:
+        roots = [CollectionNode(name="vegetation", children=[CollectionNode(name="pino")])]
+        map_settings = MapSettings(
+            logical_width=200.0,
+            logical_height=200.0,
+            logical_unit="m",
+            mask_width=64,
+            mask_height=64,
+        )
+        manager = LayerMaskManager(map_settings)
+        manager.sync_from_collection_tree(roots)
+
+        brush = BrushTool(radius_px=8, intensity=1.0, mode="paint")
+        manager.paint_stroke(
+            layer_id="vegetation/pino",
+            brush=brush,
+            start_scene=QPointF(0.0, 0.0),
+            end_scene=QPointF(0.0, 0.0),
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            package_dir = Path(temp_dir)
+            exported = manager.export_grayscale_masks(package_dir, ["vegetation/pino"])
+            self.assertIn("vegetation/pino", exported)
+
+            mask_path = package_dir / exported["vegetation/pino"]
+            self.assertTrue(mask_path.exists())
+
+    def test_generation_settings_are_preserved_when_rewriting_layer_states(self) -> None:
+        map_settings = MapSettings(
+            logical_width=200.0,
+            logical_height=200.0,
+            logical_unit="m",
+            mask_width=64,
+            mask_height=64,
+        )
+        manager = LayerMaskManager(map_settings)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir = Path(temp_dir)
+            manager.load_from_project_layers(
+                [
+                    LayerState(
+                        layer_id="vegetation/pino",
+                        name="vegetation/pino",
+                        generation_settings=LayerGenerationSettings(
+                            enabled=False,
+                            density=2.5,
+                            seed=99,
+                            allow_overlap=False,
+                            min_distance=1.0,
+                            scale_min=0.8,
+                            scale_max=1.2,
+                            rotation_random_z=30.0,
+                            priority=4,
+                        ),
+                    )
+                ],
+                project_dir,
+            )
+
+            states = manager.to_layer_states(project_dir)
+
+        self.assertEqual(len(states), 1)
+        settings = states[0].generation_settings
+        self.assertFalse(settings.enabled)
+        self.assertEqual(settings.density, 2.5)
+        self.assertEqual(settings.seed, 99)
+        self.assertFalse(settings.allow_overlap)
+        self.assertEqual(settings.min_distance, 1.0)
+        self.assertEqual(settings.scale_min, 0.8)
+        self.assertEqual(settings.scale_max, 1.2)
+        self.assertEqual(settings.rotation_random_z, 30.0)
+        self.assertEqual(settings.priority, 4)
+
+    def test_snapshot_layer_states_preserves_current_layers_without_disk_write(self) -> None:
+        map_settings = MapSettings(
+            logical_width=200.0,
+            logical_height=200.0,
+            logical_unit="m",
+            mask_width=64,
+            mask_height=64,
+        )
+        manager = LayerMaskManager(map_settings)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_dir = Path(temp_dir)
+            manager.load_from_project_layers(
+                [
+                    LayerState(
+                        layer_id="vegetation/pino",
+                        name="vegetation/pino",
+                        generation_settings=LayerGenerationSettings(enabled=True, density=3.0),
+                    )
+                ],
+                project_dir,
+            )
+
+        states = manager.snapshot_layer_states()
+
+        self.assertEqual(len(states), 1)
+        self.assertEqual(states[0].layer_id, "vegetation/pino")
+        self.assertTrue(states[0].generation_settings.enabled)
+        self.assertEqual(states[0].generation_settings.density, 3.0)
 
     def _hex_to_hue(self, color_hex: str) -> float:
         color = color_hex.lstrip("#")

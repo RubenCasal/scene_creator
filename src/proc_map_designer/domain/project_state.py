@@ -38,6 +38,7 @@ class MapSettings:
     logical_unit: str = "m"
     mask_width: int = 1024
     mask_height: int = 1024
+    base_plane_object: str = ""
 
     def __post_init__(self) -> None:
         self.logical_width = require_float(
@@ -65,6 +66,11 @@ class MapSettings:
             min_value=64,
             max_value=16384,
         )
+        self.base_plane_object = require_string(
+            self.base_plane_object,
+            "map_settings.base_plane_object",
+            allow_empty=True,
+        )
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> "MapSettings":
@@ -75,6 +81,7 @@ class MapSettings:
             logical_unit=mapping.get("logical_unit", "m"),
             mask_width=mapping.get("mask_width", 1024),
             mask_height=mapping.get("mask_height", 1024),
+            base_plane_object=mapping.get("base_plane_object", ""),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -84,6 +91,128 @@ class MapSettings:
             "logical_unit": self.logical_unit,
             "mask_width": self.mask_width,
             "mask_height": self.mask_height,
+            "base_plane_object": self.base_plane_object,
+        }
+
+
+@dataclass(slots=True)
+class LayerGenerationSettings:
+    enabled: bool = True
+    density: float = 1.0
+    seed: int | None = None
+    allow_overlap: bool = True
+    min_distance: float = 0.0
+    scale_min: float = 1.0
+    scale_max: float = 1.0
+    rotation_random_z: float = 180.0
+    priority: int = 0
+    bounding_radius: float | None = None
+    slope_limit_deg: float | None = None
+    max_count: int | None = None
+    align_to_surface_normal: bool | None = None
+
+    def __post_init__(self) -> None:
+        self.enabled = require_bool(self.enabled, "layers[].generation_settings.enabled")
+        self.density = require_float(
+            self.density,
+            "layers[].generation_settings.density",
+            min_value=0.0,
+        )
+
+        if self.seed is None:
+            seed = None
+        else:
+            seed = require_int(self.seed, "layers[].generation_settings.seed")
+        self.seed = seed
+
+        self.allow_overlap = require_bool(
+            self.allow_overlap,
+            "layers[].generation_settings.allow_overlap",
+        )
+        self.min_distance = require_float(
+            self.min_distance,
+            "layers[].generation_settings.min_distance",
+            min_value=0.0,
+        )
+        self.scale_min = require_float(self.scale_min, "layers[].generation_settings.scale_min")
+        self.scale_max = require_float(self.scale_max, "layers[].generation_settings.scale_max")
+        if self.scale_min > self.scale_max:
+            raise ValueError("'layers[].generation_settings.scale_min' debe ser <= 'scale_max'.")
+        self.rotation_random_z = require_float(
+            self.rotation_random_z,
+            "layers[].generation_settings.rotation_random_z",
+        )
+        self.priority = require_int(self.priority, "layers[].generation_settings.priority")
+
+        if self.bounding_radius is None:
+            bounding_radius = None
+        else:
+            bounding_radius = require_float(
+                self.bounding_radius,
+                "layers[].generation_settings.bounding_radius",
+                min_value=0.0,
+            )
+        self.bounding_radius = bounding_radius
+
+        if self.slope_limit_deg is None:
+            slope_limit_deg = None
+        else:
+            slope_limit_deg = require_float(
+                self.slope_limit_deg,
+                "layers[].generation_settings.slope_limit_deg",
+                min_value=0.0,
+            )
+        self.slope_limit_deg = slope_limit_deg
+
+        if self.max_count is None:
+            max_count = None
+        else:
+            max_count = require_int(self.max_count, "layers[].generation_settings.max_count", min_value=0)
+        self.max_count = max_count
+
+        if self.align_to_surface_normal is None:
+            align_to_surface_normal = None
+        else:
+            align_to_surface_normal = require_bool(
+                self.align_to_surface_normal,
+                "layers[].generation_settings.align_to_surface_normal",
+            )
+        self.align_to_surface_normal = align_to_surface_normal
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "LayerGenerationSettings":
+        mapping = require_mapping(data, "layers[].generation_settings")
+        return cls(
+            enabled=mapping.get("enabled", True),
+            density=mapping.get("density", 1.0),
+            seed=mapping.get("seed"),
+            allow_overlap=mapping.get("allow_overlap", True),
+            min_distance=mapping.get("min_distance", 0.0),
+            scale_min=mapping.get("scale_min", 1.0),
+            scale_max=mapping.get("scale_max", 1.0),
+            rotation_random_z=mapping.get("rotation_random_z", 180.0),
+            priority=mapping.get("priority", 0),
+            bounding_radius=mapping.get("bounding_radius"),
+            slope_limit_deg=mapping.get("slope_limit_deg"),
+            max_count=mapping.get("max_count"),
+            align_to_surface_normal=mapping.get("align_to_surface_normal"),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "enabled": self.enabled,
+            "density": self.density,
+            "seed": self.seed,
+            "allow_overlap": self.allow_overlap,
+            "min_distance": self.min_distance,
+            "scale_min": self.scale_min,
+            "scale_max": self.scale_max,
+            "rotation_random_z": self.rotation_random_z,
+            "priority": self.priority,
+            "bounding_radius": self.bounding_radius,
+            "slope_limit_deg": self.slope_limit_deg,
+            "max_count": self.max_count,
+            "align_to_surface_normal": self.align_to_surface_normal,
         }
 
 
@@ -95,6 +224,7 @@ class LayerState:
     opacity: float = 1.0
     mask_data_path: str | None = None
     color_hex: str = ""
+    generation_settings: LayerGenerationSettings = field(default_factory=LayerGenerationSettings)
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> "LayerState":
@@ -116,6 +246,14 @@ class LayerState:
         else:
             color_hex = require_string(raw_color, "layers[].color_hex", allow_empty=True)
 
+        raw_generation_settings = mapping.get("generation_settings", {})
+        if raw_generation_settings is None:
+            generation_settings = LayerGenerationSettings()
+        else:
+            generation_settings = LayerGenerationSettings.from_dict(
+                require_mapping(raw_generation_settings, "layers[].generation_settings")
+            )
+
         return cls(
             layer_id=layer_id,
             name=name,
@@ -123,6 +261,7 @@ class LayerState:
             opacity=opacity,
             mask_data_path=mask_data_path,
             color_hex=color_hex,
+            generation_settings=generation_settings,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -133,6 +272,7 @@ class LayerState:
             "opacity": self.opacity,
             "mask_data_path": self.mask_data_path,
             "color_hex": self.color_hex,
+            "generation_settings": self.generation_settings.to_dict(),
         }
 
 
@@ -164,6 +304,77 @@ class GenerationSettings:
 
 
 @dataclass(slots=True)
+class LatestOutputInfo:
+    backend_id: str = ""
+    status: str = ""
+    export_manifest_path: str = ""
+    result_path: str = ""
+    final_output_path: str = ""
+    completed_at: str = ""
+    error_message: str = ""
+    used_layer_ids: list[str] = field(default_factory=list)
+    validation_warnings: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        self.backend_id = require_string(self.backend_id, "latest_output.backend_id", allow_empty=True)
+        self.status = require_string(self.status, "latest_output.status", allow_empty=True)
+        self.export_manifest_path = require_string(
+            self.export_manifest_path,
+            "latest_output.export_manifest_path",
+            allow_empty=True,
+        )
+        self.result_path = require_string(self.result_path, "latest_output.result_path", allow_empty=True)
+        self.final_output_path = require_string(
+            self.final_output_path,
+            "latest_output.final_output_path",
+            allow_empty=True,
+        )
+        self.error_message = require_string(
+            self.error_message,
+            "latest_output.error_message",
+            allow_empty=True,
+        )
+        self.used_layer_ids = [
+            require_string(item, "latest_output.used_layer_ids[]") for item in require_list(self.used_layer_ids, "latest_output.used_layer_ids")
+        ]
+        self.validation_warnings = [
+            require_string(item, "latest_output.validation_warnings[]", allow_empty=True)
+            for item in require_list(self.validation_warnings, "latest_output.validation_warnings")
+        ]
+
+        if self.completed_at:
+            self.completed_at = _validate_iso_timestamp(self.completed_at, "latest_output.completed_at")
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "LatestOutputInfo":
+        mapping = require_mapping(data, "latest_output")
+        return cls(
+            backend_id=mapping.get("backend_id", ""),
+            status=mapping.get("status", ""),
+            export_manifest_path=mapping.get("export_manifest_path", ""),
+            result_path=mapping.get("result_path", ""),
+            final_output_path=mapping.get("final_output_path", ""),
+            completed_at=mapping.get("completed_at", ""),
+            error_message=mapping.get("error_message", ""),
+            used_layer_ids=mapping.get("used_layer_ids", []),
+            validation_warnings=mapping.get("validation_warnings", []),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "backend_id": self.backend_id,
+            "status": self.status,
+            "export_manifest_path": self.export_manifest_path,
+            "result_path": self.result_path,
+            "final_output_path": self.final_output_path,
+            "completed_at": self.completed_at,
+            "error_message": self.error_message,
+            "used_layer_ids": list(self.used_layer_ids),
+            "validation_warnings": list(self.validation_warnings),
+        }
+
+
+@dataclass(slots=True)
 class ProjectState:
     schema_version: int
     project_id: str
@@ -172,10 +383,12 @@ class ProjectState:
     blender_executable: str
     created_at: str
     updated_at: str
+    output_blend: str = ""
     collection_tree: list[CollectionNode] = field(default_factory=list)
     map_settings: MapSettings = field(default_factory=MapSettings)
     layers: list[LayerState] = field(default_factory=list)
     generation_settings: GenerationSettings = field(default_factory=GenerationSettings)
+    latest_output: LatestOutputInfo | None = None
 
     @classmethod
     def create_new(
@@ -183,6 +396,7 @@ class ProjectState:
         project_name: str = "Nuevo proyecto",
         source_blend: str = "",
         blender_executable: str = "",
+        output_blend: str = "",
     ) -> "ProjectState":
         now = utc_now_iso()
         return cls(
@@ -191,12 +405,14 @@ class ProjectState:
             project_name=project_name,
             source_blend=source_blend,
             blender_executable=blender_executable,
+            output_blend=output_blend,
             created_at=now,
             updated_at=now,
             collection_tree=[],
             map_settings=MapSettings(),
             layers=[],
             generation_settings=GenerationSettings(),
+            latest_output=None,
         )
 
     @classmethod
@@ -225,6 +441,12 @@ class ProjectState:
             require_mapping(raw_generation_settings, "generation_settings")
         )
 
+        raw_latest_output = mapping.get("latest_output")
+        if raw_latest_output is None:
+            latest_output = None
+        else:
+            latest_output = LatestOutputInfo.from_dict(require_mapping(raw_latest_output, "latest_output"))
+
         project_id = require_string(mapping.get("project_id"), "project_id")
         project_name = require_string(mapping.get("project_name", "Proyecto sin nombre"), "project_name")
         source_blend = require_string(mapping.get("source_blend", ""), "source_blend", allow_empty=True)
@@ -233,6 +455,7 @@ class ProjectState:
             "blender_executable",
             allow_empty=True,
         )
+        output_blend = require_string(mapping.get("output_blend", ""), "output_blend", allow_empty=True)
         created_at = _validate_iso_timestamp(mapping.get("created_at"), "created_at")
         updated_at = _validate_iso_timestamp(mapping.get("updated_at"), "updated_at")
 
@@ -242,12 +465,14 @@ class ProjectState:
             project_name=project_name,
             source_blend=source_blend,
             blender_executable=blender_executable,
+            output_blend=output_blend,
             created_at=created_at,
             updated_at=updated_at,
             collection_tree=collection_tree,
             map_settings=map_settings,
             layers=layers,
             generation_settings=generation_settings,
+            latest_output=latest_output,
         )
 
     def touch(self) -> None:
@@ -260,10 +485,12 @@ class ProjectState:
             "project_name": self.project_name,
             "source_blend": self.source_blend,
             "blender_executable": self.blender_executable,
+            "output_blend": self.output_blend,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
             "collection_tree": [node.to_dict() for node in self.collection_tree],
             "map_settings": self.map_settings.to_dict(),
             "layers": [layer.to_dict() for layer in self.layers],
             "generation_settings": self.generation_settings.to_dict(),
+            "latest_output": self.latest_output.to_dict() if self.latest_output else None,
         }

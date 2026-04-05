@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from PySide6.QtCore import QPointF, Qt
-from PySide6.QtGui import QImage
+from PySide6.QtGui import QColor, QImage
 
 from proc_map_designer.domain.coordinates import scene_to_mask
 from proc_map_designer.domain.layer_palette import (
@@ -14,7 +14,7 @@ from proc_map_designer.domain.layer_palette import (
     variant_color_for_sibling,
 )
 from proc_map_designer.domain.models import CollectionNode
-from proc_map_designer.domain.project_state import LayerState, MapSettings
+from proc_map_designer.domain.project_state import LayerGenerationSettings, LayerState, MapSettings
 from proc_map_designer.ui.canvas.brush_tool import BrushTool
 
 
@@ -31,6 +31,7 @@ class LayerMask:
     visible: bool = True
     opacity: float = 0.85
     mask_data_path: str | None = None
+    generation_settings: LayerGenerationSettings = field(default_factory=LayerGenerationSettings)
     mask_image: QImage | None = None
 
 
@@ -94,6 +95,7 @@ class LayerMaskManager:
                 visible=layer_state.visible,
                 opacity=layer_state.opacity,
                 mask_data_path=layer_state.mask_data_path,
+                generation_settings=layer_state.generation_settings,
                 mask_image=mask,
             )
             self._layers[layer.layer_id] = layer
@@ -174,9 +176,96 @@ class LayerMaskManager:
                     opacity=layer.opacity,
                     mask_data_path=relative,
                     color_hex=layer.color_hex,
+                    generation_settings=layer.generation_settings,
                 )
             )
         return states
+
+    def snapshot_layer_states(self) -> list[LayerState]:
+        states: list[LayerState] = []
+        for layer_id in self._order:
+            layer = self._layers[layer_id]
+            states.append(
+                LayerState(
+                    layer_id=layer.layer_id,
+                    name=layer.display_name,
+                    visible=layer.visible,
+                    opacity=layer.opacity,
+                    mask_data_path=layer.mask_data_path,
+                    color_hex=layer.color_hex,
+                    generation_settings=layer.generation_settings,
+                )
+            )
+        return states
+
+    def has_paint_data(self, layer_id: str) -> bool:
+        layer = self._layers.get(layer_id)
+        if layer is None:
+            return False
+        mask = layer.mask_image
+        if mask is None or mask.isNull():
+            return False
+        source = mask.convertToFormat(QImage.Format.Format_ARGB32)
+        for y in range(source.height()):
+            for x in range(source.width()):
+                if source.pixelColor(x, y).alpha() > 0:
+                    return True
+        return False
+
+    def painted_layer_ids(self) -> list[str]:
+        return [layer_id for layer_id in self._order if self.has_paint_data(layer_id)]
+
+    def export_grayscale_masks(self, package_dir: Path, layer_order: list[str]) -> dict[str, str]:
+        snapshots = self.capture_mask_snapshots(layer_order)
+        return self.export_grayscale_mask_snapshots(
+            package_dir=package_dir,
+            layer_order=layer_order,
+            mask_snapshots=snapshots,
+            map_settings=self._map_settings,
+        )
+
+    def capture_mask_snapshots(self, layer_order: list[str]) -> dict[str, QImage]:
+        snapshots: dict[str, QImage] = {}
+        for layer_id in layer_order:
+            layer = self._layers.get(layer_id)
+            if layer is None:
+                raise RuntimeError(f"No existe la capa '{layer_id}' para exportar máscara.")
+            mask = layer.mask_image or self._new_empty_mask()
+            snapshots[layer_id] = mask.copy()
+        return snapshots
+
+    @staticmethod
+    def export_grayscale_mask_snapshots(
+        package_dir: Path,
+        layer_order: list[str],
+        mask_snapshots: dict[str, QImage],
+        map_settings: MapSettings,
+    ) -> dict[str, str]:
+        masks_dir = package_dir / "masks"
+        masks_dir.mkdir(parents=True, exist_ok=True)
+
+        exported: dict[str, str] = {}
+        for index, layer_id in enumerate(layer_order):
+            mask = mask_snapshots.get(layer_id)
+            if mask is None:
+                raise RuntimeError(f"No existe la capa '{layer_id}' para exportar máscara.")
+
+            filename = f"{index:03d}_{_sanitize_layer_id(layer_id)}.png"
+            mask_path = masks_dir / filename
+            grayscale = LayerMaskManager._to_grayscale_alpha(mask)
+            if grayscale.size() != LayerMaskManager._mask_size_for_settings(map_settings):
+                grayscale = grayscale.scaled(
+                    map_settings.mask_width,
+                    map_settings.mask_height,
+                    Qt.AspectRatioMode.IgnoreAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+            if not grayscale.save(str(mask_path), "PNG"):
+                raise RuntimeError(f"No se pudo exportar la máscara de la capa '{layer_id}'.")
+
+            exported[layer_id] = mask_path.relative_to(package_dir).as_posix()
+
+        return exported
 
     def _load_mask_from_layer_state(self, layer_state: LayerState, project_dir: Path) -> QImage:
         if not layer_state.mask_data_path:
@@ -209,8 +298,27 @@ class LayerMaskManager:
         image.fill(Qt.GlobalColor.transparent)
         return image
 
+    @staticmethod
+    def _to_grayscale_alpha(mask: QImage) -> QImage:
+        source = mask.convertToFormat(QImage.Format.Format_ARGB32)
+        grayscale = QImage(source.width(), source.height(), QImage.Format.Format_Grayscale8)
+        for y in range(source.height()):
+            for x in range(source.width()):
+                value = source.pixelColor(x, y).alpha()
+                grayscale.setPixelColor(x, y, QColor(value, value, value))
+        return grayscale
+
     def _mask_size(self):
         return self._new_empty_mask().size()
+
+    @staticmethod
+    def _mask_size_for_settings(map_settings: MapSettings):
+        image = QImage(
+            map_settings.mask_width,
+            map_settings.mask_height,
+            QImage.Format.Format_ARGB32_Premultiplied,
+        )
+        return image.size()
 
     def _scene_to_mask_point(self, scene_point: QPointF) -> QPointF:
         scene_y_up = -scene_point.y()
@@ -258,6 +366,10 @@ class LayerMaskManager:
         paths: list[str] = []
 
         def visit(node: CollectionNode, prefix: str | None = None) -> None:
+            if prefix is None and node.name.strip().lower() == "collection":
+                for child in node.children:
+                    visit(child, None)
+                return
             path = node.name if prefix is None else f"{prefix}/{node.name}"
             if not node.children:
                 paths.append(path)

@@ -46,6 +46,7 @@ class BlendInspectionResult:
     roots: list[CollectionNode]
     total_collections: int
     warnings: list[str] = field(default_factory=list)
+    base_plane_candidates: list[str] = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> "BlendInspectionResult":
@@ -66,11 +67,17 @@ class BlendInspectionResult:
             raise ValueError("'warnings' must be a list of strings.")
         warnings = [str(item) for item in raw_warnings]
 
+        raw_planes = data.get("base_plane_candidates", [])
+        if not isinstance(raw_planes, list):
+            raise ValueError("'base_plane_candidates' must be a list of strings.")
+        base_plane_candidates = [str(item).strip() for item in raw_planes if str(item).strip()]
+
         return cls(
             blend_file=blend_file,
             roots=roots,
             total_collections=raw_total,
             warnings=warnings,
+            base_plane_candidates=base_plane_candidates,
         )
 
     def root_names_lower(self) -> set[str]:
@@ -86,4 +93,5 @@ class BlendInspectionResult:
             "roots": [root.to_dict() for root in self.roots],
             "total_collections": self.total_collections,
             "warnings": list(self.warnings),
+            "base_plane_candidates": list(self.base_plane_candidates),
         }
