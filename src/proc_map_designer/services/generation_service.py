@@ -57,9 +57,11 @@ class GenerationService:
             blend_file = Path(package.source_blend).expanduser().resolve()
             if not blend_file.exists():
                 raise GenerationServiceError(f"El .blend fuente no existe: {blend_file}")
-            if not any(layer.enabled for layer in package.layers):
+            has_enabled_layers = any(layer.enabled for layer in package.layers)
+            has_enabled_roads = any(road.visible for road in package.roads)
+            if not has_enabled_layers and not has_enabled_roads:
                 raise GenerationServiceError(
-                    "No hay capas habilitadas para generar. Activa al menos una capa en generation_settings.enabled."
+                    "No hay contenido habilitado para generar. Activa al menos una capa o dibuja una road visible."
                 )
 
             resolved_output = self._resolve_output_path(

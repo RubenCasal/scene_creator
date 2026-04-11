@@ -13,6 +13,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from blender_collection_utils import find_collection_by_path
+from blender_road_utils import validate_road_assets
 from blender_script_utils import bootstrap_src_path, emit_json
 
 bootstrap_src_path()
@@ -110,6 +111,11 @@ def validate_package(package_path: Path) -> dict[str, Any]:
                 warnings.append(f"La colección '{layer.layer_id}' está vacía.")
 
         resolved_layers.append(layer_info)
+
+    errors.extend(validate_road_assets(package))
+    for road in package.roads:
+        if not road.visible:
+            warnings.append(f"La road '{road.road_id}' está oculta y se omitirá en la generación.")
 
     success = not errors
     payload = {

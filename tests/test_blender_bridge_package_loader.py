@@ -160,6 +160,56 @@ class PackageLoaderTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 load_export_package(manifest_path, require_mask_files=True)
 
+    def test_load_package_reads_roads(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            package_dir = Path(tmp_dir)
+            assets_dir = package_dir / "assets" / "roads"
+            assets_dir.mkdir(parents=True)
+            asset_file = assets_dir / "geometry_nodes_procedural_road.json"
+            asset_file.write_text('{"object": "Procedural Road", "root_tree": {"tree_name": "Road", "nodes": [], "links": []}}', encoding="utf-8")
+            material_blend = package_dir / "road.blend"
+            material_blend.write_bytes(b"blend")
+
+            manifest = {
+                "schema_version": 2,
+                "project_id": "proj-road",
+                "source_blend": "/tmp/source.blend",
+                "blender_executable": "/usr/bin/blender",
+                "output_blend": "/tmp/output.blend",
+                "map": {
+                    "width": 100.0,
+                    "height": 100.0,
+                    "unit": "m",
+                    "base_plane_object": "BasePlane",
+                    "mask_resolution": {"width": 4, "height": 4},
+                },
+                "layers": [],
+                "roads": [
+                    {
+                        "road_id": "road/001",
+                        "name": "Road 1",
+                        "visible": True,
+                        "closed": False,
+                        "points": [{"x": 0.0, "y": 0.0}, {"x": 10.0, "y": 5.0}],
+                        "style": {"width": 6.0, "resolution": 24, "profile": "double"},
+                        "generator": {
+                            "seed": 9,
+                            "geometry_nodes_asset_path": "assets/roads/geometry_nodes_procedural_road.json",
+                            "material_library_blend_path": str(material_blend),
+                        },
+                    }
+                ],
+            }
+            manifest_path = package_dir / "project.json"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+            package = load_export_package(manifest_path, require_mask_files=True)
+            self.assertEqual(len(package.roads), 1)
+            self.assertEqual(package.roads[0].road_id, "road/001")
+            self.assertEqual(package.roads[0].style.profile, "double")
+            self.assertTrue(package.roads[0].generator.geometry_nodes_asset_exists)
+            self.assertTrue(package.roads[0].generator.material_library_blend_exists)
+
 
 if __name__ == "__main__":
     unittest.main()

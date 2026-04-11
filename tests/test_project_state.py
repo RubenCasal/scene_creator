@@ -16,6 +16,10 @@ from proc_map_designer.domain.project_state import (
     LatestOutputInfo,
     MapSettings,
     ProjectState,
+    RoadGeneratorSettings,
+    RoadPoint,
+    RoadState,
+    RoadStyleSettings,
 )
 
 
@@ -42,7 +46,7 @@ class ProjectStateTests(unittest.TestCase):
         payload = state.to_dict()
         loaded = ProjectState.from_dict(payload)
 
-        self.assertEqual(loaded.schema_version, 1)
+        self.assertEqual(loaded.schema_version, 2)
         self.assertEqual(loaded.project_name, "MapaTest")
         self.assertEqual(loaded.source_blend, "/tmp/example.blend")
         self.assertEqual(loaded.output_blend, "/tmp/output.blend")
@@ -107,11 +111,55 @@ class ProjectStateTests(unittest.TestCase):
         payload = ProjectState.create_new(project_name="LegacyCompat").to_dict()
         payload.pop("output_blend", None)
         payload["map_settings"].pop("base_plane_object", None)
+        payload.pop("roads", None)
+        payload["schema_version"] = 1
 
         loaded = ProjectState.from_dict(payload)
 
         self.assertEqual(loaded.output_blend, "")
         self.assertEqual(loaded.map_settings.base_plane_object, "")
+
+    def test_road_round_trip_serialization(self) -> None:
+        state = ProjectState.create_new(project_name="Roads")
+        state.roads = [
+            RoadState(
+                road_id="road/001",
+                name="road/001",
+                points=[RoadPoint(x=-10.0, y=5.0), RoadPoint(x=12.0, y=8.0)],
+                style=RoadStyleSettings(width=7.5, resolution=32),
+                generator=RoadGeneratorSettings(seed=123, material_library_blend_path="blender_defaults/road.blend"),
+            )
+        ]
+
+        loaded = ProjectState.from_dict(state.to_dict())
+        self.assertEqual(len(loaded.roads), 1)
+        self.assertEqual(loaded.roads[0].road_id, "road/001")
+        self.assertEqual(loaded.roads[0].style.width, 7.5)
+        self.assertEqual(loaded.roads[0].style.profile, "single")
+        self.assertEqual(loaded.roads[0].generator.seed, 123)
+        self.assertEqual(loaded.roads[0].generator.material_library_blend_path, "blender_defaults/road.blend")
+
+    def test_road_style_profile_round_trip(self) -> None:
+        state = ProjectState.create_new(project_name="RoadProfile")
+        state.roads = [
+            RoadState(
+                road_id="road/002",
+                name="road/002",
+                points=[RoadPoint(x=0.0, y=0.0), RoadPoint(x=20.0, y=5.0)],
+                style=RoadStyleSettings(width=8.0, resolution=16, profile="double"),
+            )
+        ]
+
+        loaded = ProjectState.from_dict(state.to_dict())
+        self.assertEqual(loaded.roads[0].style.profile, "double")
+
+    def test_legacy_project_without_roads_is_supported(self) -> None:
+        payload = ProjectState.create_new(project_name="LegacyRoadCompat").to_dict()
+        payload["schema_version"] = 1
+        payload.pop("roads", None)
+
+        loaded = ProjectState.from_dict(payload)
+        self.assertEqual(loaded.roads, [])
 
     def test_layer_generation_settings_round_trip(self) -> None:
         state = ProjectState.create_new(project_name="GenLayer")

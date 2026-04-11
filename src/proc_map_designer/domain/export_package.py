@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
-EXPORT_PACKAGE_SCHEMA_VERSION = 1
+EXPORT_PACKAGE_SCHEMA_VERSION = 2
 
 
 @dataclass(slots=True)
@@ -52,6 +52,68 @@ class ExportLayer:
 
 
 @dataclass(slots=True)
+class ExportRoadPoint:
+    x: float
+    y: float
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "x": self.x,
+            "y": self.y,
+        }
+
+
+@dataclass(slots=True)
+class ExportRoadStyle:
+    width: float
+    resolution: int
+    profile: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "width": self.width,
+            "resolution": self.resolution,
+            "profile": self.profile,
+        }
+
+
+@dataclass(slots=True)
+class ExportRoadGenerator:
+    seed: int
+    geometry_nodes_asset_path: str
+    material_library_blend_path: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "seed": self.seed,
+            "geometry_nodes_asset_path": self.geometry_nodes_asset_path,
+            "material_library_blend_path": self.material_library_blend_path,
+        }
+
+
+@dataclass(slots=True)
+class ExportRoad:
+    road_id: str
+    name: str
+    visible: bool
+    closed: bool
+    points: list[ExportRoadPoint]
+    style: ExportRoadStyle
+    generator: ExportRoadGenerator
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "road_id": self.road_id,
+            "name": self.name,
+            "visible": self.visible,
+            "closed": self.closed,
+            "points": [point.to_dict() for point in self.points],
+            "style": self.style.to_dict(),
+            "generator": self.generator.to_dict(),
+        }
+
+
+@dataclass(slots=True)
 class ExportMap:
     width: float
     height: float
@@ -80,6 +142,7 @@ class ExportProject:
     output_blend: str
     map: ExportMap
     layers: list[ExportLayer] = field(default_factory=list)
+    roads: list[ExportRoad] = field(default_factory=list)
     schema_version: int = EXPORT_PACKAGE_SCHEMA_VERSION
 
     def to_dict(self) -> dict[str, Any]:
@@ -91,4 +154,5 @@ class ExportProject:
             "output_blend": self.output_blend,
             "map": self.map.to_dict(),
             "layers": [layer.to_dict() for layer in self.layers],
+            "roads": [road.to_dict() for road in self.roads],
         }

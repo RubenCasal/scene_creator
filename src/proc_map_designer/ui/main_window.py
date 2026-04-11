@@ -47,9 +47,11 @@ from proc_map_designer.services.project_service import ProjectService, ProjectSe
 from proc_map_designer.ui.canvas.brush_tool import BrushTool
 from proc_map_designer.ui.canvas.canvas_view import CanvasView
 from proc_map_designer.ui.canvas.layer_mask_manager import LayerMaskManager
+from proc_map_designer.ui.canvas.road_manager import RoadManager
 from proc_map_designer.ui.map_settings_dialog import MapSettingsDialog
 
 EXPECTED_ROOTS = {"vegetation", "building"}
+ROAD_TOOL_TREE_ID = "__road_tool__"
 
 
 @dataclass(slots=True)
@@ -208,7 +210,10 @@ class MainWindow(QMainWindow):
 
         self._brush_tool = BrushTool(radius_px=24, intensity=0.75, mode="paint")
         self._layer_manager = LayerMaskManager(self._project_state.map_settings)
+        self._road_manager = RoadManager(self._project_state.map_settings)
         self._active_layer_id: str | None = None
+        self._editing_target = "layer"
+        self._raster_mode = "paint"
         self._parameter_layer_id: str | None = None
         self._updating_layer_tree = False
         self._updating_parameter_form = False
@@ -437,9 +442,22 @@ class MainWindow(QMainWindow):
         self.layer_tree = QTreeWidget()
         self.layer_tree.setHeaderLabels(["Layer"])
         self.layer_tree.setAlternatingRowColors(True)
+        self.layer_tree.setMinimumWidth(320)
+        self.layer_tree.setIndentation(20)
+        self.layer_tree.setUniformRowHeights(False)
+        tree_font = self.layer_tree.font()
+        tree_font.setPointSize(tree_font.pointSize() + 2)
+        self.layer_tree.setFont(tree_font)
+        self.layer_tree.header().setDefaultSectionSize(280)
         self.layer_tree.itemChanged.connect(self._on_layer_item_changed)
         self.layer_tree.itemSelectionChanged.connect(self._on_layer_selection_changed)
         left_layout.addWidget(self.layer_tree, stretch=1)
+
+        self.roads_hint_label = QLabel(
+            "Road aparece en este árbol aunque no exista en el .blend. Selecciona 'Road > Nueva road' para dibujar carreteras procedurales."
+        )
+        self.roads_hint_label.setWordWrap(True)
+        left_layout.addWidget(self.roads_hint_label)
 
         self.active_layer_label = QLabel("Capa activa: ninguna")
         left_layout.addWidget(self.active_layer_label)
@@ -472,17 +490,40 @@ class MainWindow(QMainWindow):
         self.erase_mode_button.setChecked(False)
         self.erase_mode_button.clicked.connect(lambda: self._set_brush_mode("erase"))
         mode_layout.addWidget(self.erase_mode_button)
+
         left_layout.addLayout(mode_layout)
+
+        self.road_width_label = QLabel(f"Ancho road: {self._brush_tool.radius_px:.0f}")
+        left_layout.addWidget(self.road_width_label)
+        self.road_width_slider = QSlider(Qt.Orientation.Horizontal)
+        self.road_width_slider.setRange(1, 128)
+        self.road_width_slider.setValue(self._brush_tool.radius_px)
+        self.road_width_slider.valueChanged.connect(self._on_road_width_changed)
+        left_layout.addWidget(self.road_width_slider)
+
+        self.road_profile_label = QLabel("Perfil road")
+        left_layout.addWidget(self.road_profile_label)
+        self.road_profile_combo = QComboBox()
+        self.road_profile_combo.addItem("Single", "single")
+        self.road_profile_combo.addItem("Double", "double")
+        self.road_profile_combo.setCurrentIndex(0)
+        self.road_profile_combo.currentIndexChanged.connect(self._on_road_profile_changed)
+        left_layout.addWidget(self.road_profile_combo)
 
         self.clear_layer_button = QPushButton("Limpiar capa activa")
         self.clear_layer_button.clicked.connect(self._clear_active_layer)
         left_layout.addWidget(self.clear_layer_button)
 
+        self.remove_last_road_button = QPushButton("Eliminar última road")
+        self.remove_last_road_button.clicked.connect(self._remove_last_road)
+        left_layout.addWidget(self.remove_last_road_button)
+
         splitter.addWidget(left_panel)
 
         self.canvas_view = CanvasView()
         splitter.addWidget(self.canvas_view)
-        splitter.setSizes([410, 970])
+        left_panel.setMinimumWidth(360)
+        splitter.setSizes([500, 880])
 
         nav_layout = QHBoxLayout()
         self.paint_back_button = QPushButton("Back")
@@ -619,8 +660,12 @@ class MainWindow(QMainWindow):
     def _wire_canvas(self) -> None:
         self.canvas_view.set_brush_tool(self._brush_tool)
         self.canvas_view.set_mask_manager(self._layer_manager)
+        self.canvas_view.set_road_manager(self._road_manager)
         self.canvas_view.set_map_settings(self._project_state.map_settings)
+        self.canvas_view.set_road_width(float(self.road_width_slider.value()))
+        self.canvas_view.set_road_profile(str(self.road_profile_combo.currentData()))
         self.canvas_view.mask_modified.connect(self._on_mask_modified)
+        self.canvas_view.road_modified.connect(self._on_road_modified)
 
     def _populate_backend_choices(self) -> None:
         self.backend_combo.blockSignals(True)
@@ -660,11 +705,11 @@ class MainWindow(QMainWindow):
 
     def _go_to_generate_step(self) -> None:
         painted_layer_ids = self._layer_manager.painted_layer_ids()
-        if not painted_layer_ids:
+        if not painted_layer_ids and not self._road_manager.has_roads():
             QMessageBox.information(
                 self,
-                "Sin pintura",
-                "Pinta al menos una capa antes de continuar al paso de generación.",
+                "Sin contenido",
+                "Pinta al menos una capa o dibuja una road antes de continuar al paso de generación.",
             )
             return
         self._refresh_painted_layers_ui()
@@ -677,6 +722,7 @@ class MainWindow(QMainWindow):
         self._project_state.map_settings.mask_height = int(self.setup_mask_height_spin.value())
         self._project_state.touch()
         self._layer_manager.set_map_settings(self._project_state.map_settings)
+        self._road_manager.set_map_settings(self._project_state.map_settings)
         self.canvas_view.set_map_settings(self._project_state.map_settings)
         self.canvas_view.refresh_overlay()
         self._refresh_map_summary_label()
@@ -888,6 +934,7 @@ class MainWindow(QMainWindow):
         self._project_state.map_settings = dialog.result_settings()
         self._project_state.touch()
         self._layer_manager.set_map_settings(self._project_state.map_settings)
+        self._road_manager.set_map_settings(self._project_state.map_settings)
         self.canvas_view.set_map_settings(self._project_state.map_settings)
         self.canvas_view.refresh_overlay()
         self._refresh_map_summary_label()
@@ -1056,10 +1103,16 @@ class MainWindow(QMainWindow):
             for layer_state in self._layer_manager.snapshot_layer_states()
             if layer_state.layer_id in painted_ids
         ]
-        if not current_layers:
-            QMessageBox.information(self, "Sin pintura", "Pinta al menos una capa antes de validar o generar.")
+        current_roads = self._road_manager.snapshot_road_states()
+        if not current_layers and not current_roads:
+            QMessageBox.information(
+                self,
+                "Sin contenido",
+                "Pinta al menos una capa o dibuja una road antes de validar o generar.",
+            )
             return
         self._project_state.layers = current_layers
+        self._project_state.roads = current_roads
         project_snapshot = ProjectState.from_dict(self._project_state.to_dict())
         mask_snapshots = self._layer_manager.capture_mask_snapshots([layer.layer_id for layer in current_layers])
         package_dir = self._build_pipeline_package_dir()
@@ -1365,56 +1418,106 @@ class MainWindow(QMainWindow):
     def _refresh_layer_tree(self) -> None:
         self._updating_layer_tree = True
         self.layer_tree.clear()
-        items_by_path: dict[str, QTreeWidgetItem] = {}
+        if self._project_state.collection_tree:
+            for root in self._project_state.collection_tree:
+                self._add_collection_tree_item(root, None, None)
+        else:
+            for layer in self._layer_manager.all_layers():
+                parts = layer.layer_id.split("/")
+                parent_item: QTreeWidgetItem | None = None
+                prefix: str | None = None
+                for index, part in enumerate(parts):
+                    path = part if prefix is None else f"{prefix}/{part}"
+                    is_leaf = index == len(parts) - 1
+                    item = self._create_group_or_layer_item(part, path, parent_item, is_leaf)
+                    parent_item = item
+                    prefix = path
 
-        for layer in self._layer_manager.all_layers():
-            parts = layer.layer_id.split("/")
-            current_path: list[str] = []
-            parent_item: QTreeWidgetItem | None = None
-
-            for index, part in enumerate(parts):
-                current_path.append(part)
-                path_key = "/".join(current_path)
-                item = items_by_path.get(path_key)
-                if item is None:
-                    item = QTreeWidgetItem([part])
-                    if parent_item is None:
-                        self.layer_tree.addTopLevelItem(item)
-                    else:
-                        parent_item.addChild(item)
-                    items_by_path[path_key] = item
-
-                is_leaf = index == len(parts) - 1
-                if is_leaf:
-                    item.setFlags(
-                        Qt.ItemFlag.ItemIsEnabled
-                        | Qt.ItemFlag.ItemIsSelectable
-                        | Qt.ItemFlag.ItemIsUserCheckable
-                    )
-                    item.setData(0, Qt.ItemDataRole.UserRole, layer.layer_id)
-                    item.setCheckState(
-                        0,
-                        Qt.CheckState.Checked if layer.visible else Qt.CheckState.Unchecked,
-                    )
-                    item.setForeground(0, QColor(layer.color_hex))
-                else:
-                    item.setFlags(Qt.ItemFlag.ItemIsEnabled)
-                    group_font = QFont()
-                    group_font.setBold(True)
-                    item.setFont(0, group_font)
-
-                parent_item = item
+        self._add_road_tree_section()
 
         self.layer_tree.expandAll()
         self._updating_layer_tree = False
 
         if self._active_layer_id and self._select_layer_item(self._active_layer_id):
             return
+        if self._editing_target == "road" and self._select_layer_item(ROAD_TOOL_TREE_ID):
+            return
         self._select_first_layer()
+
+    def _add_collection_tree_item(
+        self,
+        node,
+        parent_item: QTreeWidgetItem | None,
+        prefix: str | None,
+    ) -> None:
+        path = node.name if prefix is None else f"{prefix}/{node.name}"
+        is_leaf = not node.children
+        item = self._create_group_or_layer_item(node.name, path, parent_item, is_leaf)
+        if not is_leaf:
+            for child in node.children:
+                self._add_collection_tree_item(child, item, path)
+
+    def _create_group_or_layer_item(
+        self,
+        label: str,
+        path: str,
+        parent_item: QTreeWidgetItem | None,
+        is_leaf: bool,
+    ) -> QTreeWidgetItem:
+        item = QTreeWidgetItem([label])
+        if parent_item is None:
+            self.layer_tree.addTopLevelItem(item)
+        else:
+            parent_item.addChild(item)
+        if is_leaf:
+            layer = self._layer_manager.get_layer(path)
+            item.setFlags(
+                Qt.ItemFlag.ItemIsEnabled
+                | Qt.ItemFlag.ItemIsSelectable
+                | Qt.ItemFlag.ItemIsUserCheckable
+            )
+            item.setData(0, Qt.ItemDataRole.UserRole, {"kind": "layer", "id": path})
+            item.setCheckState(
+                0,
+                Qt.CheckState.Checked if layer and layer.visible else Qt.CheckState.Unchecked,
+            )
+            if layer is not None:
+                item.setForeground(0, QColor(layer.color_hex))
+        else:
+            item.setFlags(Qt.ItemFlag.ItemIsEnabled)
+            group_font = QFont()
+            group_font.setBold(True)
+            item.setFont(0, group_font)
+        return item
+
+    def _add_road_tree_section(self) -> None:
+        road_root = QTreeWidgetItem(["Road"])
+        road_root.setFlags(Qt.ItemFlag.ItemIsEnabled)
+        root_font = QFont()
+        root_font.setBold(True)
+        road_root.setFont(0, root_font)
+        self.layer_tree.addTopLevelItem(road_root)
+
+        tool_item = QTreeWidgetItem(["Nueva road"])
+        tool_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+        tool_item.setData(0, Qt.ItemDataRole.UserRole, {"kind": "road_tool", "id": ROAD_TOOL_TREE_ID})
+        road_root.addChild(tool_item)
+
+        for road in self._road_manager.all_roads():
+            road_item = QTreeWidgetItem([road.name])
+            road_item.setFlags(
+                Qt.ItemFlag.ItemIsEnabled
+                | Qt.ItemFlag.ItemIsSelectable
+                | Qt.ItemFlag.ItemIsUserCheckable
+            )
+            road_item.setData(0, Qt.ItemDataRole.UserRole, {"kind": "road", "id": road.road_id})
+            road_item.setCheckState(0, Qt.CheckState.Checked if road.visible else Qt.CheckState.Unchecked)
+            road_root.addChild(road_item)
 
     def _select_layer_item(self, layer_id: str) -> bool:
         for item in self._iter_leaf_items():
-            if item.data(0, Qt.ItemDataRole.UserRole) == layer_id:
+            payload = item.data(0, Qt.ItemDataRole.UserRole)
+            if isinstance(payload, dict) and payload.get("id") == layer_id:
                 self.layer_tree.setCurrentItem(item)
                 return True
         return False
@@ -1429,8 +1532,8 @@ class MainWindow(QMainWindow):
         stack = [self.layer_tree.topLevelItem(i) for i in range(self.layer_tree.topLevelItemCount())]
         while stack:
             current = stack.pop(0)
-            layer_id = current.data(0, Qt.ItemDataRole.UserRole)
-            if isinstance(layer_id, str):
+            payload = current.data(0, Qt.ItemDataRole.UserRole)
+            if isinstance(payload, dict) and isinstance(payload.get("id"), str):
                 yield current
             for idx in range(current.childCount()):
                 stack.append(current.child(idx))
@@ -1441,17 +1544,34 @@ class MainWindow(QMainWindow):
             self._set_active_layer(None)
             return
 
-        layer_id = selected[0].data(0, Qt.ItemDataRole.UserRole)
-        if not isinstance(layer_id, str):
+        payload = selected[0].data(0, Qt.ItemDataRole.UserRole)
+        if not isinstance(payload, dict):
             self._set_active_layer(None)
             return
-        self._set_active_layer(layer_id)
+        kind = payload.get("kind")
+        item_id = payload.get("id")
+        if kind == "layer" and isinstance(item_id, str):
+            if self._raster_mode == "erase":
+                self._set_brush_mode("erase")
+            else:
+                self._set_brush_mode("paint")
+            self._set_active_layer(item_id)
+            return
+        if kind in {"road_tool", "road"}:
+            self._set_brush_mode("road")
+            self._set_active_layer(None)
+            return
+        self._set_active_layer(None)
 
     def _set_active_layer(self, layer_id: str | None) -> None:
         self._active_layer_id = layer_id
         self.canvas_view.set_active_layer(layer_id)
         if layer_id is None:
-            self.active_layer_label.setText("Capa activa: ninguna")
+            if self._editing_target == "road":
+                self.active_layer_label.setText("Herramienta activa: Road")
+                self.statusBar().showMessage("Herramienta activa: Road")
+            else:
+                self.active_layer_label.setText("Capa activa: ninguna")
             return
         self.active_layer_label.setText(f"Capa activa: {layer_id}")
         self.statusBar().showMessage(f"Capa activa: {layer_id}")
@@ -1459,12 +1579,19 @@ class MainWindow(QMainWindow):
     def _on_layer_item_changed(self, item: QTreeWidgetItem, column: int) -> None:
         if self._updating_layer_tree or column != 0:
             return
-        layer_id = item.data(0, Qt.ItemDataRole.UserRole)
-        if not isinstance(layer_id, str):
+        payload = item.data(0, Qt.ItemDataRole.UserRole)
+        if not isinstance(payload, dict):
             return
+        kind = payload.get("kind")
+        item_id = payload.get("id")
 
         visible = item.checkState(0) == Qt.CheckState.Checked
-        self._layer_manager.set_layer_visibility(layer_id, visible)
+        if kind == "layer" and isinstance(item_id, str):
+            self._layer_manager.set_layer_visibility(item_id, visible)
+        elif kind == "road" and isinstance(item_id, str):
+            self._road_manager.set_road_visibility(item_id, visible)
+        else:
+            return
         self.canvas_view.refresh_overlay()
         self._project_state.touch()
 
@@ -1479,14 +1606,44 @@ class MainWindow(QMainWindow):
 
     def _set_brush_mode(self, mode: str) -> None:
         if mode == "paint":
+            self._editing_target = "layer"
+            self._raster_mode = "paint"
             self.paint_mode_button.setChecked(True)
             self.erase_mode_button.setChecked(False)
             self._brush_tool.set_mode("paint")
+            self.canvas_view.set_edit_mode("paint")
             return
 
+        if mode == "road":
+            self._editing_target = "road"
+            self.paint_mode_button.setChecked(False)
+            self.erase_mode_button.setChecked(False)
+            self.canvas_view.set_edit_mode("road")
+            return
+
+        self._editing_target = "layer"
+        self._raster_mode = "erase"
         self.paint_mode_button.setChecked(False)
         self.erase_mode_button.setChecked(True)
         self._brush_tool.set_mode("erase")
+        self.canvas_view.set_edit_mode("erase")
+
+    def _on_road_width_changed(self, value: int) -> None:
+        self.road_width_label.setText(f"Ancho road: {value}")
+        self.canvas_view.set_road_width(float(value))
+
+    def _on_road_profile_changed(self, _index: int) -> None:
+        self.canvas_view.set_road_profile(str(self.road_profile_combo.currentData()))
+
+    def _remove_last_road(self) -> None:
+        road = self._road_manager.remove_last_road()
+        if road is None:
+            QMessageBox.information(self, "Sin roads", "No hay roads para eliminar.")
+            return
+        self.canvas_view.refresh_overlay()
+        self._refresh_layer_tree()
+        self._project_state.touch()
+        self._append_log(f"Road eliminada: {road.road_id}")
 
     def _clear_active_layer(self) -> None:
         if not self._active_layer_id:
@@ -1503,22 +1660,34 @@ class MainWindow(QMainWindow):
         if self.workflow_stack.currentIndex() == 2:
             self._refresh_painted_layers_ui()
 
+    def _on_road_modified(self) -> None:
+        self._project_state.touch()
+        self.canvas_view.refresh_overlay()
+        self._refresh_layer_tree()
+        if self.workflow_stack.currentIndex() == 2:
+            self._refresh_painted_layers_ui()
+
     def _sync_project_runtime_data(self) -> None:
         self._project_state.source_blend = str(self._current_blend) if self._current_blend else ""
         self._project_state.blender_executable = self._settings.get_blender_executable() or ""
         self._project_state.output_blend = self.output_path_edit.text().strip()
         self._project_state.map_settings.base_plane_object = self.base_plane_edit.text().strip()
+        self._project_state.roads = self._road_manager.snapshot_road_states()
         if self._project_file_path and not self._project_state.project_name.strip():
             self._project_state.project_name = self._project_file_path.stem
 
     def _rebuild_layer_manager(self, project_dir: Path | None) -> None:
         self._layer_manager = LayerMaskManager(self._project_state.map_settings)
+        self._road_manager = RoadManager(self._project_state.map_settings)
         if project_dir and self._project_state.layers:
             self._layer_manager.load_from_project_layers(self._project_state.layers, project_dir)
+        if self._project_state.roads:
+            self._road_manager.load_from_project_roads(self._project_state.roads)
         if self._project_state.collection_tree:
             self._layer_manager.ensure_layers_for_collections(self._project_state.collection_tree)
 
         self.canvas_view.set_mask_manager(self._layer_manager)
+        self.canvas_view.set_road_manager(self._road_manager)
         self.canvas_view.set_map_settings(self._project_state.map_settings)
         self.canvas_view.refresh_overlay()
         self._refresh_layer_tree()

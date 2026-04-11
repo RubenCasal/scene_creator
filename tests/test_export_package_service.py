@@ -11,7 +11,15 @@ SRC_PATH = PROJECT_ROOT / "src"
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
-from proc_map_designer.domain.project_state import LayerGenerationSettings, LayerState, ProjectState
+from proc_map_designer.domain.project_state import (
+    LayerGenerationSettings,
+    LayerState,
+    ProjectState,
+    RoadGeneratorSettings,
+    RoadPoint,
+    RoadState,
+    RoadStyleSettings,
+)
 from proc_map_designer.services.export_package_service import ExportPackageError, ExportPackageService
 
 
@@ -63,7 +71,7 @@ class ExportPackageServiceTests(unittest.TestCase):
             self.assertTrue(project_json_path.exists())
             payload = json.loads(project_json_path.read_text(encoding="utf-8"))
 
-            self.assertEqual(payload["schema_version"], 1)
+            self.assertEqual(payload["schema_version"], 2)
             self.assertEqual(payload["project_id"], project.project_id)
             self.assertEqual(payload["source_blend"], "/tmp/source.blend")
             self.assertEqual(payload["blender_executable"], "/usr/bin/blender")
@@ -80,6 +88,46 @@ class ExportPackageServiceTests(unittest.TestCase):
             self.assertEqual(layer["mask_path"], "masks/000_vegetation_pino.png")
             # seed de capa ausente => fallback a seed global de proyecto
             self.assertEqual(layer["settings"]["seed"], 77)
+
+    def test_export_package_includes_roads_and_copies_geometry_asset(self) -> None:
+        service = ExportPackageService()
+        project = ProjectState.create_new(
+            project_name="RoadExport",
+            source_blend="/tmp/source.blend",
+            blender_executable="/usr/bin/blender",
+            output_blend="/tmp/output.blend",
+        )
+        project.map_settings.base_plane_object = "BasePlane"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            asset_path = temp_path / "geometry_nodes_procedural_road.json"
+            asset_path.write_text('{"object": "Procedural Road", "root_tree": {"tree_name": "Road", "nodes": [], "links": []}}', encoding="utf-8")
+            material_blend = temp_path / "road.blend"
+            material_blend.write_bytes(b"blend")
+            project.roads = [
+                RoadState(
+                    road_id="road/001",
+                    name="Road 1",
+                    points=[RoadPoint(x=0.0, y=0.0), RoadPoint(x=10.0, y=5.0)],
+                    style=RoadStyleSettings(width=6.0, resolution=20),
+                    generator=RoadGeneratorSettings(
+                        seed=55,
+                        geometry_nodes_asset_path=str(asset_path),
+                        material_library_blend_path=str(material_blend),
+                    ),
+                )
+            ]
+
+            manifest_path = service.export_package(project, temp_path / "pkg", lambda _root, _layer_ids: {})
+            payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+            self.assertEqual(len(payload["roads"]), 1)
+            self.assertEqual(payload["roads"][0]["road_id"], "road/001")
+            self.assertEqual(payload["roads"][0]["style"]["width"], 6.0)
+            self.assertEqual(payload["roads"][0]["style"]["profile"], "single")
+            copied_asset = (manifest_path.parent / payload["roads"][0]["generator"]["geometry_nodes_asset_path"]).resolve()
+            self.assertTrue(copied_asset.exists())
+            self.assertEqual(payload["roads"][0]["generator"]["material_library_blend_path"], str(material_blend.resolve()))
 
     def test_export_fails_when_required_base_plane_is_missing(self) -> None:
         service = ExportPackageService()

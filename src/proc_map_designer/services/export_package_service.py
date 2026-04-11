@@ -2,12 +2,22 @@ from __future__ import annotations
 
 import json
 import hashlib
+import shutil
 from pathlib import Path
 from typing import Callable, Mapping, Sequence
 
-from proc_map_designer.domain.export_package import ExportLayer, ExportLayerSettings, ExportMap, ExportProject
+from proc_map_designer.domain.export_package import (
+    ExportLayer,
+    ExportLayerSettings,
+    ExportMap,
+    ExportProject,
+    ExportRoad,
+    ExportRoadGenerator,
+    ExportRoadPoint,
+    ExportRoadStyle,
+)
 from proc_map_designer.domain.layer_palette import split_layer_id
-from proc_map_designer.domain.project_state import LayerState, ProjectState
+from proc_map_designer.domain.project_state import LayerState, ProjectState, RoadState
 
 MaskExporter = Callable[[Path, Sequence[str]], Mapping[str, str]]
 
@@ -17,6 +27,8 @@ class ExportPackageError(RuntimeError):
 
 
 class ExportPackageService:
+    _REPO_ROOT = Path(__file__).resolve().parents[3]
+
     def export_package(
         self,
         project: ProjectState,
@@ -112,6 +124,32 @@ class ExportPackageService:
                 )
             )
 
+        roads_payload: list[ExportRoad] = []
+        for road in project.roads:
+            if not road.generator.enabled:
+                continue
+            asset_relative_path = self._copy_road_geometry_asset(package_dir, road)
+            road_seed = self._resolve_road_seed(project, road)
+            roads_payload.append(
+                ExportRoad(
+                    road_id=road.road_id,
+                    name=road.name or road.road_id,
+                    visible=road.visible,
+                    closed=road.closed,
+                    points=[ExportRoadPoint(x=point.x, y=point.y) for point in road.points],
+                    style=ExportRoadStyle(
+                        width=road.style.width,
+                        resolution=road.style.resolution,
+                        profile=road.style.profile,
+                    ),
+                    generator=ExportRoadGenerator(
+                        seed=road_seed,
+                        geometry_nodes_asset_path=asset_relative_path,
+                        material_library_blend_path=self._resolve_road_material_library_path(road),
+                    ),
+                )
+            )
+
         return ExportProject(
             project_id=project.project_id,
             source_blend=project.source_blend,
@@ -119,6 +157,7 @@ class ExportPackageService:
             output_blend=project.output_blend,
             map=map_payload,
             layers=layers_payload,
+            roads=roads_payload,
         )
 
     def _resolve_layer_seed(self, project: ProjectState, layer: LayerState) -> int:
@@ -131,6 +170,58 @@ class ExportPackageService:
             digest = hashlib.sha256(seed_text.encode("utf-8")).digest()
             return int.from_bytes(digest[:4], byteorder="big", signed=False)
         return 0
+
+    def _resolve_road_seed(self, project: ProjectState, road: RoadState) -> int:
+        if road.generator.seed is not None:
+            return road.generator.seed
+        if project.generation_settings.seed is not None:
+            return project.generation_settings.seed
+        if project.generation_settings.randomize_seed:
+            seed_text = f"{project.project_id}:{road.road_id}:road"
+            digest = hashlib.sha256(seed_text.encode("utf-8")).digest()
+            return int.from_bytes(digest[:4], byteorder="big", signed=False)
+        return 0
+
+    def _copy_road_geometry_asset(self, package_dir: Path, road: RoadState) -> str:
+        raw_path = road.generator.geometry_nodes_asset_path.strip()
+        if not raw_path:
+            raise ExportPackageError(f"La road '{road.road_id}' no tiene geometry_nodes_asset_path configurado.")
+
+        source_path = Path(raw_path).expanduser()
+        if not source_path.is_absolute():
+            source_path = source_path.resolve()
+
+        if not source_path.exists() or not source_path.is_file():
+            raise ExportPackageError(
+                f"No existe el asset Geometry Nodes de '{road.road_id}': {source_path}"
+            )
+
+        assets_dir = package_dir / "assets" / "roads"
+        assets_dir.mkdir(parents=True, exist_ok=True)
+        target_path = assets_dir / source_path.name
+        try:
+            shutil.copy2(source_path, target_path)
+        except OSError as exc:
+            raise ExportPackageError(
+                f"No se pudo copiar el asset Geometry Nodes de '{road.road_id}': {exc}"
+            ) from exc
+        return target_path.relative_to(package_dir).as_posix()
+
+    def _resolve_road_material_library_path(self, road: RoadState) -> str:
+        raw_path = road.generator.material_library_blend_path.strip()
+        if not raw_path:
+            raise ExportPackageError(f"La road '{road.road_id}' no tiene material_library_blend_path configurado.")
+
+        source_path = Path(raw_path).expanduser()
+        if not source_path.is_absolute():
+            source_path = (self._REPO_ROOT / source_path).resolve()
+
+        if not source_path.exists() or not source_path.is_file():
+            raise ExportPackageError(
+                f"No existe la librería visual de '{road.road_id}': {source_path}"
+            )
+
+        return str(source_path)
 
     def _resolve_and_validate_mask_path(
         self,

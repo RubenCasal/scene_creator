@@ -5,6 +5,10 @@ from .package_loader import (
     ExportLayerSettings,
     ExportMapInfo,
     ExportPackage,
+    ExportRoadDefinition,
+    ExportRoadGenerator,
+    ExportRoadPoint,
+    ExportRoadStyle,
     load_export_package,
 )
 from .mask_decoder import decode_mask_values
@@ -23,6 +27,10 @@ __all__ = [
     "ExportLayerSettings",
     "ExportMapInfo",
     "ExportPackage",
+    "ExportRoadDefinition",
+    "ExportRoadGenerator",
+    "ExportRoadPoint",
+    "ExportRoadStyle",
     "decode_mask_values",
     "LayerPlanInput",
     "LayerPlacementPlan",

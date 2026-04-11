@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from PySide6.QtCore import QPoint, QPointF, Qt, Signal
+from PySide6.QtCore import QPoint, QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import QMouseEvent, QPainter, QPen, QPixmap, QTransform, QWheelEvent
 from PySide6.QtWidgets import (
     QGraphicsPixmapItem,
@@ -13,10 +13,13 @@ from proc_map_designer.domain.project_state import MapSettings
 from proc_map_designer.ui.canvas.brush_tool import BrushTool
 from proc_map_designer.ui.canvas.layer_mask_manager import LayerMaskManager
 from proc_map_designer.ui.canvas.overlay_renderer import OverlayRenderer
+from proc_map_designer.ui.canvas.road_manager import RoadManager
+from proc_map_designer.ui.canvas.road_overlay_renderer import RoadOverlayRenderer
 
 
 class CanvasView(QGraphicsView):
     mask_modified = Signal()
+    road_modified = Signal()
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -40,8 +43,13 @@ class CanvasView(QGraphicsView):
         self._mask_manager: LayerMaskManager | None = None
         self._brush_tool = BrushTool()
         self._overlay_renderer = OverlayRenderer()
+        self._road_overlay_renderer = RoadOverlayRenderer()
         self._active_layer_id: str | None = None
         self._map_settings = MapSettings()
+        self._road_manager: RoadManager | None = None
+        self._edit_mode = "paint"
+        self._road_width = 6.0
+        self._road_profile = "single"
 
         self._is_drawing = False
         self._last_scene_point: QPointF | None = None
@@ -65,14 +73,39 @@ class CanvasView(QGraphicsView):
         self._mask_manager = manager
         self._refresh_overlay_pixmap()
 
+    def set_road_manager(self, manager: RoadManager) -> None:
+        self._road_manager = manager
+        self.viewport().update()
+
     def set_active_layer(self, layer_id: str | None) -> None:
         self._active_layer_id = layer_id
 
     def set_brush_tool(self, brush_tool: BrushTool) -> None:
         self._brush_tool = brush_tool
 
+    def set_edit_mode(self, mode: str) -> None:
+        self._edit_mode = mode
+
+    def set_road_width(self, width: float) -> None:
+        self._road_width = max(0.01, float(width))
+
+    def set_road_profile(self, profile: str) -> None:
+        self._road_profile = profile
+
     def refresh_overlay(self) -> None:
         self._refresh_overlay_pixmap()
+        self.viewport().update()
+
+    def drawForeground(self, painter: QPainter, rect: QRectF) -> None:
+        super().drawForeground(painter, rect)
+        del rect
+        if self._road_manager is None:
+            return
+        self._road_overlay_renderer.render(
+            painter,
+            self._road_manager.road_scene_paths(),
+            self._road_manager.draft_scene_path(),
+        )
 
     def _refresh_overlay_pixmap(self) -> None:
         if self._mask_manager is None:
@@ -115,6 +148,18 @@ class CanvasView(QGraphicsView):
             event.accept()
             return
 
+        if event.button() == Qt.MouseButton.LeftButton and self._can_draw_road():
+            scene_point = self.mapToScene(event.position().toPoint())
+            if not self._scene.sceneRect().contains(scene_point):
+                return
+            assert self._road_manager is not None
+            self._is_drawing = True
+            self._last_scene_point = scene_point
+            self._road_manager.begin_stroke(scene_point, self._road_width, self._road_profile)
+            self.viewport().update()
+            event.accept()
+            return
+
         if event.button() == Qt.MouseButton.LeftButton and self._can_paint():
             scene_point = self.mapToScene(event.position().toPoint())
             if not self._scene.sceneRect().contains(scene_point):
@@ -133,6 +178,16 @@ class CanvasView(QGraphicsView):
             self._pan_last_pos = event.pos()
             self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - delta.x())
             self.verticalScrollBar().setValue(self.verticalScrollBar().value() - delta.y())
+            event.accept()
+            return
+
+        if self._is_drawing and self._can_draw_road():
+            scene_point = self.mapToScene(event.position().toPoint())
+            if self._road_manager is None:
+                return
+            self._road_manager.extend_stroke(scene_point)
+            self._last_scene_point = scene_point
+            self.viewport().update()
             event.accept()
             return
 
@@ -155,6 +210,17 @@ class CanvasView(QGraphicsView):
             return
 
         if event.button() == Qt.MouseButton.LeftButton and self._is_drawing:
+            if self._can_draw_road() and self._road_manager is not None:
+                scene_point = self.mapToScene(event.position().toPoint())
+                road = self._road_manager.end_stroke(scene_point)
+                self._is_drawing = False
+                self._last_scene_point = None
+                self.viewport().update()
+                if road is not None:
+                    self.road_modified.emit()
+                event.accept()
+                return
+
             self._is_drawing = False
             self._last_scene_point = None
             event.accept()
@@ -164,10 +230,14 @@ class CanvasView(QGraphicsView):
 
     def _can_paint(self) -> bool:
         return (
-            self._mask_manager is not None
+            self._edit_mode != "road"
+            and self._mask_manager is not None
             and self._active_layer_id is not None
             and self._mask_manager.get_layer(self._active_layer_id) is not None
         )
+
+    def _can_draw_road(self) -> bool:
+        return self._edit_mode == "road" and self._road_manager is not None
 
     def _paint_segment(self, start: QPointF, end: QPointF) -> None:
         if not self._can_paint() or self._mask_manager is None or self._active_layer_id is None:

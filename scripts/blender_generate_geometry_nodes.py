@@ -15,6 +15,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from blender_collection_utils import find_collection_by_path
+from blender_road_utils import ensure_roads_generated
 from blender_script_utils import bootstrap_src_path, emit_json
 
 bootstrap_src_path()
@@ -22,6 +23,7 @@ bootstrap_src_path()
 from proc_map_designer.blender_bridge import LayerPlanInput, MapDimensions, plan_generation
 from proc_map_designer.blender_bridge.package_loader import ExportLayerDefinition, load_export_package
 from blender_generate_python_batch import (
+    configure_material_viewport,
     create_runtime_plane,
     cleanup_generated_state,
     hide_original_scene_content,
@@ -217,8 +219,11 @@ def main(argv: list[str]) -> None:
         bpy.context.scene.collection.objects.unlink(runtime_plane)
     print(f"[geometry_nodes] Plano runtime creado: {runtime_plane.name} ({package.map.width} x {package.map.height})")
     hide_original_scene_content({root_collection.name})
+    configure_material_viewport()
     summary = generate_emitters(runtime_plane, root_collection, plans, layer_lookup, assets)
-    for entry in summary:
+    road_summary = ensure_roads_generated(package, root_collection, base_plane)
+    combined_summary = summary + road_summary
+    for entry in combined_summary:
         print(f"[geometry_nodes] {entry['layer_id']}: {entry['count']} puntos emisores")
 
     bpy.ops.wm.save_as_mainfile(filepath=str(output_path))
@@ -228,7 +233,7 @@ def main(argv: list[str]) -> None:
         "success": True,
         "backend": BACKEND_NAME,
         "output_blend": str(output_path),
-        "placed_layers": summary,
+        "placed_layers": combined_summary,
         "warnings": [
             "Backend Geometry Nodes usa un point-cloud intermedio generado por Python.",
             "La orientación y escala por punto se aproximan dentro del node graph y pueden no coincidir exactamente con python_batch.",

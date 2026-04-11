@@ -1,0 +1,5344 @@
+{
+  "object": "Procedural Road",
+  "modifier": "GeometryNodes",
+  "root_tree": {
+    "tree_name": "Procedural Road",
+    "nodes": [
+      {
+        "name": "Random Value",
+        "label": "",
+        "type": "FunctionNodeRandomValue",
+        "location": [
+          -1880.0001220703125,
+          -400.0
+        ],
+        "inputs": [
+          {
+            "name": "Min",
+            "socket_type": "NodeSocketVector",
+            "is_linked": false,
+            "default_value": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "name": "Max",
+            "socket_type": "NodeSocketVector",
+            "is_linked": false,
+            "default_value": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          {
+            "name": "Min",
+            "socket_type": "NodeSocketFloat",
+            "is_linked": false,
+            "default_value": 0.0
+          },
+          {
+            "name": "Max",
+            "socket_type": "NodeSocketFloat",
+            "is_linked": false,
+            "default_value": 1.0
+          },
+          {
+            "name": "Min",
+            "socket_type": "NodeSocketInt",
+            "is_linked": false,
+            "default_value": 0
+          },
+          {
+            "name": "Max",
+            "socket_type": "NodeSocketInt",
+            "is_linked": false,
+            "default_value": 100
+          },
+          {
+            "name": "Probability",
+            "socket_type": "NodeSocketFloatFactor",
+            "is_linked": true
+          },
+          {
+            "name": "ID",
+            "socket_type": "NodeSocketInt",
+            "is_linked": false,
+            "default_value": 0
+          },
+          {
+            "name": "Seed",
+            "socket_type": "NodeSocketInt",
+            "is_linked": true
+          }
+        ],
+        "outputs": [
+          {
+            "name": "Value",
+            "socket_type": "NodeSocketVector",
+            "is_linked": false,
+            "default_value": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "name": "Value",
+            "socket_type": "NodeSocketFloat",
+            "is_linked": false,
+            "default_value": 0.0
+          },
+          {
+            "name": "Value",
+            "socket_type": "NodeSocketInt",
+            "is_linked": false,
+            "default_value": 0
+          },
+          {
+            "name": "Value",
+            "socket_type": "NodeSocketBool",
+            "is_linked": true
+          }
+        ]
+      },
+      {
+        "name": "Join Geometry.001",
+        "label": "",
+        "type": "GeometryNodeJoinGeometry",
+        "location": [
+          -1020.0,
+          80.0
+        ],
+        "inputs": [
+          {
+            "name": "Geometry",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          }
+        ],
+        "outputs": [
+          {
+            "name": "Geometry",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          }
+        ]
+      },
+      {
+        "name": "Set Material.002",
+        "label": "",
+        "type": "GeometryNodeSetMaterial",
+        "location": [
+          -860.0000610351562,
+          80.0
+        ],
+        "inputs": [
+          {
+            "name": "Geometry",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          },
+          {
+            "name": "Selection",
+            "socket_type": "NodeSocketBool",
+            "is_linked": false,
+            "default_value": true
+          },
+          {
+            "name": "Material",
+            "socket_type": "NodeSocketMaterial",
+            "is_linked": false,
+            "default_value": "<bpy_struct, Material(\"Borders\") at 0x753e11d71d20>"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "Geometry",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          }
+        ]
+      },
+      {
+        "name": "Join Geometry.002",
+        "label": "",
+        "type": "GeometryNodeJoinGeometry",
+        "location": [
+          -1020.0,
+          -140.0
+        ],
+        "inputs": [
+          {
+            "name": "Geometry",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          }
+        ],
+        "outputs": [
+          {
+            "name": "Geometry",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          }
+        ]
+      },
+      {
+        "name": "Set Material.003",
+        "label": "",
+        "type": "GeometryNodeSetMaterial",
+        "location": [
+          -860.0000610351562,
+          -140.0
+        ],
+        "inputs": [
+          {
+            "name": "Geometry",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          },
+          {
+            "name": "Selection",
+            "socket_type": "NodeSocketBool",
+            "is_linked": false,
+            "default_value": true
+          },
+          {
+            "name": "Material",
+            "socket_type": "NodeSocketMaterial",
+            "is_linked": false,
+            "default_value": "<bpy_struct, Material(\"Rail\") at 0x753e11d73da0>"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "Geometry",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          }
+        ]
+      },
+      {
+        "name": "Join Geometry.003",
+        "label": "",
+        "type": "GeometryNodeJoinGeometry",
+        "location": [
+          -1020.0,
+          -400.0
+        ],
+        "inputs": [
+          {
+            "name": "Geometry",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          }
+        ],
+        "outputs": [
+          {
+            "name": "Geometry",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          }
+        ]
+      },
+      {
+        "name": "Set Material",
+        "label": "",
+        "type": "GeometryNodeSetMaterial",
+        "location": [
+          -860.0000610351562,
+          280.0
+        ],
+        "inputs": [
+          {
+            "name": "Geometry",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          },
+          {
+            "name": "Selection",
+            "socket_type": "NodeSocketBool",
+            "is_linked": false,
+            "default_value": true
+          },
+          {
+            "name": "Material",
+            "socket_type": "NodeSocketMaterial",
+            "is_linked": false,
+            "default_value": "<bpy_struct, Material(\"Road\") at 0x753e11d738a0>"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "Geometry",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          }
+        ]
+      },
+      {
+        "name": "Group Output",
+        "label": "",
+        "type": "NodeGroupOutput",
+        "location": [
+          -160.0,
+          300.0
+        ],
+        "inputs": [
+          {
+            "name": "Geometry",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          },
+          {
+            "name": "",
+            "socket_type": "NodeSocketVirtual",
+            "is_linked": false
+          }
+        ],
+        "outputs": []
+      },
+      {
+        "name": "Group",
+        "label": "",
+        "type": "GeometryNodeGroup",
+        "location": [
+          -1200.0,
+          -140.0
+        ],
+        "inputs": [
+          {
+            "name": "Curve",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          },
+          {
+            "name": "Length",
+            "socket_type": "NodeSocketFloatDistance",
+            "is_linked": true
+          },
+          {
+            "name": "X",
+            "socket_type": "NodeSocketFloat",
+            "is_linked": true
+          },
+          {
+            "name": "Value",
+            "socket_type": "NodeSocketFloat",
+            "is_linked": true
+          },
+          {
+            "name": "Radius",
+            "socket_type": "NodeSocketFloatDistance",
+            "is_linked": true
+          },
+          {
+            "name": "Resolution",
+            "socket_type": "NodeSocketInt",
+            "is_linked": true
+          }
+        ],
+        "outputs": [
+          {
+            "name": "Geometry",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          },
+          {
+            "name": "Geometry",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          }
+        ],
+        "subtree": {
+          "tree_name": "Rail",
+          "nodes": [
+            {
+              "name": "Group Output",
+              "label": "",
+              "type": "NodeGroupOutput",
+              "location": [
+                670.0,
+                0.0
+              ],
+              "inputs": [
+                {
+                  "name": "Geometry",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Geometry",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "",
+                  "socket_type": "NodeSocketVirtual",
+                  "is_linked": false
+                }
+              ],
+              "outputs": []
+            },
+            {
+              "name": "Curve to Mesh.004",
+              "label": "",
+              "type": "GeometryNodeCurveToMesh",
+              "location": [
+                0.0,
+                250.0
+              ],
+              "inputs": [
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Profile Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Scale",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Fill Caps",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": false
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Mesh to Curve.001",
+              "label": "",
+              "type": "GeometryNodeMeshToCurve",
+              "location": [
+                159.99993896484375,
+                250.0
+              ],
+              "inputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Selection",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": true
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Curve to Mesh.003",
+              "label": "",
+              "type": "GeometryNodeCurveToMesh",
+              "location": [
+                320.0,
+                250.0
+              ],
+              "inputs": [
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Profile Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Scale",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Fill Caps",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": false
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Set Shade Smooth.001",
+              "label": "",
+              "type": "GeometryNodeSetShadeSmooth",
+              "location": [
+                480.0,
+                250.0
+              ],
+              "inputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Selection",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": true
+                },
+                {
+                  "name": "Shade Smooth",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": false
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Combine XYZ.001",
+              "label": "",
+              "type": "ShaderNodeCombineXYZ",
+              "location": [
+                -320.0,
+                250.0
+              ],
+              "inputs": [
+                {
+                  "name": "X",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Y",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Z",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.0
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Vector",
+                  "socket_type": "NodeSocketVector",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Math",
+              "label": "",
+              "type": "ShaderNodeMath",
+              "location": [
+                -480.0,
+                250.0
+              ],
+              "inputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": -1.0
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.5
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Math.001",
+              "label": "",
+              "type": "ShaderNodeMath",
+              "location": [
+                -480.0,
+                -30.000030517578125
+              ],
+              "inputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": -1.0
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.5
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Math.002",
+              "label": "",
+              "type": "ShaderNodeMath",
+              "location": [
+                -480.0,
+                -190.0
+              ],
+              "inputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": -1.0
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.5
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Curve Line.003",
+              "label": "",
+              "type": "GeometryNodeCurvePrimitiveLine",
+              "location": [
+                -160.0,
+                -30.000030517578125
+              ],
+              "inputs": [
+                {
+                  "name": "Start",
+                  "socket_type": "NodeSocketVectorTranslation",
+                  "is_linked": true
+                },
+                {
+                  "name": "End",
+                  "socket_type": "NodeSocketVectorTranslation",
+                  "is_linked": false,
+                  "default_value": [
+                    1.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                {
+                  "name": "Direction",
+                  "socket_type": "NodeSocketVector",
+                  "is_linked": false,
+                  "default_value": [
+                    0.0,
+                    -1.0,
+                    0.0
+                  ]
+                },
+                {
+                  "name": "Length",
+                  "socket_type": "NodeSocketFloatDistance",
+                  "is_linked": true
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Curve to Mesh.005",
+              "label": "",
+              "type": "GeometryNodeCurveToMesh",
+              "location": [
+                0.0,
+                -30.000030517578125
+              ],
+              "inputs": [
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Profile Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Scale",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Fill Caps",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": false
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Mesh to Curve.002",
+              "label": "",
+              "type": "GeometryNodeMeshToCurve",
+              "location": [
+                159.99993896484375,
+                -30.000030517578125
+              ],
+              "inputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Selection",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": true
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Curve to Mesh.006",
+              "label": "",
+              "type": "GeometryNodeCurveToMesh",
+              "location": [
+                320.0,
+                -30.000030517578125
+              ],
+              "inputs": [
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Profile Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Scale",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Fill Caps",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": false
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Set Shade Smooth.002",
+              "label": "",
+              "type": "GeometryNodeSetShadeSmooth",
+              "location": [
+                480.0,
+                -30.000030517578125
+              ],
+              "inputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Selection",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": true
+                },
+                {
+                  "name": "Shade Smooth",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": false
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Combine XYZ.002",
+              "label": "",
+              "type": "ShaderNodeCombineXYZ",
+              "location": [
+                -320.0,
+                -30.000030517578125
+              ],
+              "inputs": [
+                {
+                  "name": "X",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Y",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Z",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.0
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Vector",
+                  "socket_type": "NodeSocketVector",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Curve Circle.002",
+              "label": "",
+              "type": "GeometryNodeCurvePrimitiveCircle",
+              "location": [
+                -160.0,
+                -250.0
+              ],
+              "inputs": [
+                {
+                  "name": "Resolution",
+                  "socket_type": "NodeSocketInt",
+                  "is_linked": true
+                },
+                {
+                  "name": "Point 1",
+                  "socket_type": "NodeSocketVectorTranslation",
+                  "is_linked": false,
+                  "default_value": [
+                    -0.03999999910593033,
+                    0.0,
+                    0.0
+                  ]
+                },
+                {
+                  "name": "Point 2",
+                  "socket_type": "NodeSocketVectorTranslation",
+                  "is_linked": false,
+                  "default_value": [
+                    0.03999999910593033,
+                    0.0,
+                    0.0
+                  ]
+                },
+                {
+                  "name": "Point 3",
+                  "socket_type": "NodeSocketVectorTranslation",
+                  "is_linked": false,
+                  "default_value": [
+                    0.03999999910593033,
+                    0.0,
+                    0.0
+                  ]
+                },
+                {
+                  "name": "Radius",
+                  "socket_type": "NodeSocketFloatDistance",
+                  "is_linked": true
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Center",
+                  "socket_type": "NodeSocketVector",
+                  "is_linked": false,
+                  "default_value": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Curve Circle.001",
+              "label": "",
+              "type": "GeometryNodeCurvePrimitiveCircle",
+              "location": [
+                0.0,
+                110.0
+              ],
+              "inputs": [
+                {
+                  "name": "Resolution",
+                  "socket_type": "NodeSocketInt",
+                  "is_linked": true
+                },
+                {
+                  "name": "Point 1",
+                  "socket_type": "NodeSocketVectorTranslation",
+                  "is_linked": false,
+                  "default_value": [
+                    -0.03999999910593033,
+                    0.0,
+                    0.0
+                  ]
+                },
+                {
+                  "name": "Point 2",
+                  "socket_type": "NodeSocketVectorTranslation",
+                  "is_linked": false,
+                  "default_value": [
+                    0.03999999910593033,
+                    0.0,
+                    0.0
+                  ]
+                },
+                {
+                  "name": "Point 3",
+                  "socket_type": "NodeSocketVectorTranslation",
+                  "is_linked": false,
+                  "default_value": [
+                    0.03999999910593033,
+                    0.0,
+                    0.0
+                  ]
+                },
+                {
+                  "name": "Radius",
+                  "socket_type": "NodeSocketFloatDistance",
+                  "is_linked": true
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Center",
+                  "socket_type": "NodeSocketVector",
+                  "is_linked": false,
+                  "default_value": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Group Input",
+              "label": "",
+              "type": "NodeGroupInput",
+              "location": [
+                -680.0,
+                0.0
+              ],
+              "inputs": [],
+              "outputs": [
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Length",
+                  "socket_type": "NodeSocketFloatDistance",
+                  "is_linked": true
+                },
+                {
+                  "name": "X",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Radius",
+                  "socket_type": "NodeSocketFloatDistance",
+                  "is_linked": true
+                },
+                {
+                  "name": "Resolution",
+                  "socket_type": "NodeSocketInt",
+                  "is_linked": true
+                },
+                {
+                  "name": "",
+                  "socket_type": "NodeSocketVirtual",
+                  "is_linked": false
+                }
+              ]
+            },
+            {
+              "name": "Curve Line.002",
+              "label": "",
+              "type": "GeometryNodeCurvePrimitiveLine",
+              "location": [
+                -160.0,
+                250.0
+              ],
+              "inputs": [
+                {
+                  "name": "Start",
+                  "socket_type": "NodeSocketVectorTranslation",
+                  "is_linked": true
+                },
+                {
+                  "name": "End",
+                  "socket_type": "NodeSocketVectorTranslation",
+                  "is_linked": false,
+                  "default_value": [
+                    1.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                {
+                  "name": "Direction",
+                  "socket_type": "NodeSocketVector",
+                  "is_linked": false,
+                  "default_value": [
+                    0.0,
+                    -1.0,
+                    0.0
+                  ]
+                },
+                {
+                  "name": "Length",
+                  "socket_type": "NodeSocketFloatDistance",
+                  "is_linked": true
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Named Attribute",
+              "label": "",
+              "type": "GeometryNodeInputNamedAttribute",
+              "location": [
+                295.0,
+                250.0
+              ],
+              "inputs": [
+                {
+                  "name": "Name",
+                  "socket_type": "NodeSocketString",
+                  "is_linked": false,
+                  "default_value": "radius"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Attribute",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Exists",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Switch",
+              "label": "",
+              "type": "GeometryNodeSwitch",
+              "location": [
+                295.0,
+                250.0
+              ],
+              "inputs": [
+                {
+                  "name": "Switch",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": true
+                },
+                {
+                  "name": "False",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 1.0
+                },
+                {
+                  "name": "True",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Output",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Named Attribute.001",
+              "label": "",
+              "type": "GeometryNodeInputNamedAttribute",
+              "location": [
+                295.0,
+                -30.000030517578125
+              ],
+              "inputs": [
+                {
+                  "name": "Name",
+                  "socket_type": "NodeSocketString",
+                  "is_linked": false,
+                  "default_value": "radius"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Attribute",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Exists",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Switch.001",
+              "label": "",
+              "type": "GeometryNodeSwitch",
+              "location": [
+                295.0,
+                -30.000030517578125
+              ],
+              "inputs": [
+                {
+                  "name": "Switch",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": true
+                },
+                {
+                  "name": "False",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 1.0
+                },
+                {
+                  "name": "True",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Output",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Named Attribute.002",
+              "label": "",
+              "type": "GeometryNodeInputNamedAttribute",
+              "location": [
+                -25.0,
+                -30.000030517578125
+              ],
+              "inputs": [
+                {
+                  "name": "Name",
+                  "socket_type": "NodeSocketString",
+                  "is_linked": false,
+                  "default_value": "radius"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Attribute",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Exists",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Switch.002",
+              "label": "",
+              "type": "GeometryNodeSwitch",
+              "location": [
+                -25.0,
+                -30.000030517578125
+              ],
+              "inputs": [
+                {
+                  "name": "Switch",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": true
+                },
+                {
+                  "name": "False",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 1.0
+                },
+                {
+                  "name": "True",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Output",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Named Attribute.003",
+              "label": "",
+              "type": "GeometryNodeInputNamedAttribute",
+              "location": [
+                -25.0,
+                250.0
+              ],
+              "inputs": [
+                {
+                  "name": "Name",
+                  "socket_type": "NodeSocketString",
+                  "is_linked": false,
+                  "default_value": "radius"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Attribute",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Exists",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Switch.003",
+              "label": "",
+              "type": "GeometryNodeSwitch",
+              "location": [
+                -25.0,
+                250.0
+              ],
+              "inputs": [
+                {
+                  "name": "Switch",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": true
+                },
+                {
+                  "name": "False",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 1.0
+                },
+                {
+                  "name": "True",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Output",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ]
+            }
+          ],
+          "links": [
+            {
+              "from_node": "Math.001",
+              "from_socket": "Value",
+              "to_node": "Combine XYZ.002",
+              "to_socket": "X"
+            },
+            {
+              "from_node": "Mesh to Curve.002",
+              "from_socket": "Curve",
+              "to_node": "Curve to Mesh.006",
+              "to_socket": "Curve"
+            },
+            {
+              "from_node": "Math.002",
+              "from_socket": "Value",
+              "to_node": "Combine XYZ.002",
+              "to_socket": "Y"
+            },
+            {
+              "from_node": "Curve Circle.002",
+              "from_socket": "Curve",
+              "to_node": "Curve to Mesh.006",
+              "to_socket": "Profile Curve"
+            },
+            {
+              "from_node": "Curve Line.002",
+              "from_socket": "Curve",
+              "to_node": "Curve to Mesh.004",
+              "to_socket": "Profile Curve"
+            },
+            {
+              "from_node": "Curve to Mesh.005",
+              "from_socket": "Mesh",
+              "to_node": "Mesh to Curve.002",
+              "to_socket": "Mesh"
+            },
+            {
+              "from_node": "Curve to Mesh.004",
+              "from_socket": "Mesh",
+              "to_node": "Mesh to Curve.001",
+              "to_socket": "Mesh"
+            },
+            {
+              "from_node": "Curve to Mesh.003",
+              "from_socket": "Mesh",
+              "to_node": "Set Shade Smooth.001",
+              "to_socket": "Mesh"
+            },
+            {
+              "from_node": "Mesh to Curve.001",
+              "from_socket": "Curve",
+              "to_node": "Curve to Mesh.003",
+              "to_socket": "Curve"
+            },
+            {
+              "from_node": "Curve to Mesh.006",
+              "from_socket": "Mesh",
+              "to_node": "Set Shade Smooth.002",
+              "to_socket": "Mesh"
+            },
+            {
+              "from_node": "Curve Circle.001",
+              "from_socket": "Curve",
+              "to_node": "Curve to Mesh.003",
+              "to_socket": "Profile Curve"
+            },
+            {
+              "from_node": "Combine XYZ.001",
+              "from_socket": "Vector",
+              "to_node": "Curve Line.002",
+              "to_socket": "Start"
+            },
+            {
+              "from_node": "Curve Line.003",
+              "from_socket": "Curve",
+              "to_node": "Curve to Mesh.005",
+              "to_socket": "Profile Curve"
+            },
+            {
+              "from_node": "Combine XYZ.002",
+              "from_socket": "Vector",
+              "to_node": "Curve Line.003",
+              "to_socket": "Start"
+            },
+            {
+              "from_node": "Math",
+              "from_socket": "Value",
+              "to_node": "Combine XYZ.001",
+              "to_socket": "Y"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "Length",
+              "to_node": "Curve Line.002",
+              "to_socket": "Length"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "Length",
+              "to_node": "Curve Line.003",
+              "to_socket": "Length"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "Value",
+              "to_node": "Math",
+              "to_socket": "Value"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "Value",
+              "to_node": "Math.002",
+              "to_socket": "Value"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "X",
+              "to_node": "Combine XYZ.001",
+              "to_socket": "X"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "X",
+              "to_node": "Math.001",
+              "to_socket": "Value"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "Curve",
+              "to_node": "Curve to Mesh.004",
+              "to_socket": "Curve"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "Curve",
+              "to_node": "Curve to Mesh.005",
+              "to_socket": "Curve"
+            },
+            {
+              "from_node": "Set Shade Smooth.001",
+              "from_socket": "Mesh",
+              "to_node": "Group Output",
+              "to_socket": "Geometry"
+            },
+            {
+              "from_node": "Set Shade Smooth.002",
+              "from_socket": "Mesh",
+              "to_node": "Group Output",
+              "to_socket": "Geometry"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "Radius",
+              "to_node": "Curve Circle.001",
+              "to_socket": "Radius"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "Radius",
+              "to_node": "Curve Circle.002",
+              "to_socket": "Radius"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "Resolution",
+              "to_node": "Curve Circle.002",
+              "to_socket": "Resolution"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "Resolution",
+              "to_node": "Curve Circle.001",
+              "to_socket": "Resolution"
+            },
+            {
+              "from_node": "Named Attribute",
+              "from_socket": "Exists",
+              "to_node": "Switch",
+              "to_socket": "Switch"
+            },
+            {
+              "from_node": "Named Attribute",
+              "from_socket": "Attribute",
+              "to_node": "Switch",
+              "to_socket": "True"
+            },
+            {
+              "from_node": "Switch",
+              "from_socket": "Output",
+              "to_node": "Curve to Mesh.003",
+              "to_socket": "Scale"
+            },
+            {
+              "from_node": "Named Attribute.001",
+              "from_socket": "Exists",
+              "to_node": "Switch.001",
+              "to_socket": "Switch"
+            },
+            {
+              "from_node": "Named Attribute.001",
+              "from_socket": "Attribute",
+              "to_node": "Switch.001",
+              "to_socket": "True"
+            },
+            {
+              "from_node": "Switch.001",
+              "from_socket": "Output",
+              "to_node": "Curve to Mesh.006",
+              "to_socket": "Scale"
+            },
+            {
+              "from_node": "Named Attribute.002",
+              "from_socket": "Exists",
+              "to_node": "Switch.002",
+              "to_socket": "Switch"
+            },
+            {
+              "from_node": "Named Attribute.002",
+              "from_socket": "Attribute",
+              "to_node": "Switch.002",
+              "to_socket": "True"
+            },
+            {
+              "from_node": "Switch.002",
+              "from_socket": "Output",
+              "to_node": "Curve to Mesh.005",
+              "to_socket": "Scale"
+            },
+            {
+              "from_node": "Named Attribute.003",
+              "from_socket": "Exists",
+              "to_node": "Switch.003",
+              "to_socket": "Switch"
+            },
+            {
+              "from_node": "Named Attribute.003",
+              "from_socket": "Attribute",
+              "to_node": "Switch.003",
+              "to_socket": "True"
+            },
+            {
+              "from_node": "Switch.003",
+              "from_socket": "Output",
+              "to_node": "Curve to Mesh.004",
+              "to_socket": "Scale"
+            }
+          ]
+        }
+      },
+      {
+        "name": "Subdivide Curve",
+        "label": "",
+        "type": "GeometryNodeSubdivideCurve",
+        "location": [
+          -1720.0001220703125,
+          -120.00000762939453
+        ],
+        "inputs": [
+          {
+            "name": "Curve",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          },
+          {
+            "name": "Cuts",
+            "socket_type": "NodeSocketInt",
+            "is_linked": true
+          }
+        ],
+        "outputs": [
+          {
+            "name": "Curve",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          }
+        ]
+      },
+      {
+        "name": "Join Geometry",
+        "label": "",
+        "type": "GeometryNodeJoinGeometry",
+        "location": [
+          -360.0,
+          300.0
+        ],
+        "inputs": [
+          {
+            "name": "Geometry",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          }
+        ],
+        "outputs": [
+          {
+            "name": "Geometry",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          }
+        ]
+      },
+      {
+        "name": "Viewer",
+        "label": "",
+        "type": "GeometryNodeViewer",
+        "location": [
+          -160.0,
+          200.0
+        ],
+        "inputs": [
+          {
+            "name": "Geometry",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          },
+          {
+            "name": "Value",
+            "socket_type": "NodeSocketFloat",
+            "is_linked": false,
+            "default_value": 0.0
+          },
+          {
+            "name": "",
+            "socket_type": "NodeSocketVirtual",
+            "is_linked": false
+          }
+        ],
+        "outputs": []
+      },
+      {
+        "name": "Borders",
+        "label": "",
+        "type": "GeometryNodeGroup",
+        "location": [
+          -1200.0,
+          80.0
+        ],
+        "inputs": [
+          {
+            "name": "Value",
+            "socket_type": "NodeSocketFloat",
+            "is_linked": true
+          },
+          {
+            "name": "Value",
+            "socket_type": "NodeSocketFloat",
+            "is_linked": true
+          },
+          {
+            "name": "Curve",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          },
+          {
+            "name": "Offset Scale",
+            "socket_type": "NodeSocketFloat",
+            "is_linked": true
+          },
+          {
+            "name": "Curve",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          }
+        ],
+        "outputs": [
+          {
+            "name": "Geometry",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          },
+          {
+            "name": "Geometry",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          }
+        ],
+        "subtree": {
+          "tree_name": "Borders",
+          "nodes": [
+            {
+              "name": "Group Input",
+              "label": "",
+              "type": "NodeGroupInput",
+              "location": [
+                -690.0,
+                0.0
+              ],
+              "inputs": [],
+              "outputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Offset Scale",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "",
+                  "socket_type": "NodeSocketVirtual",
+                  "is_linked": false
+                }
+              ]
+            },
+            {
+              "name": "Math.005",
+              "label": "",
+              "type": "ShaderNodeMath",
+              "location": [
+                -490.0,
+                -260.0
+              ],
+              "inputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.05000000447034836
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.5
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Math.004",
+              "label": "",
+              "type": "ShaderNodeMath",
+              "location": [
+                -490.0,
+                -100.0
+              ],
+              "inputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.5
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Math.006",
+              "label": "",
+              "type": "ShaderNodeMath",
+              "location": [
+                -330.0,
+                -100.0
+              ],
+              "inputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": -1.0
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.5
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Math.007",
+              "label": "",
+              "type": "ShaderNodeMath",
+              "location": [
+                -330.0,
+                -260.0
+              ],
+              "inputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": -1.0
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.5
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Combine XYZ.004",
+              "label": "",
+              "type": "ShaderNodeCombineXYZ",
+              "location": [
+                -170.0,
+                -100.0
+              ],
+              "inputs": [
+                {
+                  "name": "X",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Y",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.0
+                },
+                {
+                  "name": "Z",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.0
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Vector",
+                  "socket_type": "NodeSocketVector",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Curve Line.003",
+              "label": "",
+              "type": "GeometryNodeCurvePrimitiveLine",
+              "location": [
+                -10.00006103515625,
+                -100.0
+              ],
+              "inputs": [
+                {
+                  "name": "Start",
+                  "socket_type": "NodeSocketVectorTranslation",
+                  "is_linked": true
+                },
+                {
+                  "name": "End",
+                  "socket_type": "NodeSocketVectorTranslation",
+                  "is_linked": true
+                },
+                {
+                  "name": "Direction",
+                  "socket_type": "NodeSocketVector",
+                  "is_linked": false,
+                  "default_value": [
+                    0.0,
+                    -1.0,
+                    0.0
+                  ]
+                },
+                {
+                  "name": "Length",
+                  "socket_type": "NodeSocketFloatDistance",
+                  "is_linked": false,
+                  "default_value": 0.30000007152557373
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Curve to Mesh.001",
+              "label": "",
+              "type": "GeometryNodeCurveToMesh",
+              "location": [
+                150.0,
+                -100.0
+              ],
+              "inputs": [
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Profile Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Scale",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Fill Caps",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": false
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Combine XYZ.005",
+              "label": "",
+              "type": "ShaderNodeCombineXYZ",
+              "location": [
+                -170.0,
+                -260.0
+              ],
+              "inputs": [
+                {
+                  "name": "X",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Y",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.0
+                },
+                {
+                  "name": "Z",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.0
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Vector",
+                  "socket_type": "NodeSocketVector",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Extrude Mesh.001",
+              "label": "",
+              "type": "GeometryNodeExtrudeMesh",
+              "location": [
+                330.0,
+                -100.0
+              ],
+              "inputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Selection",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": true
+                },
+                {
+                  "name": "Offset",
+                  "socket_type": "NodeSocketVectorTranslation",
+                  "is_linked": false,
+                  "default_value": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                {
+                  "name": "Offset Scale",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Individual",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": false
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Top",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": false
+                },
+                {
+                  "name": "Side",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": false
+                }
+              ]
+            },
+            {
+              "name": "Set Shade Smooth.003",
+              "label": "",
+              "type": "GeometryNodeSetShadeSmooth",
+              "location": [
+                490.0,
+                -100.0
+              ],
+              "inputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Selection",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": true
+                },
+                {
+                  "name": "Shade Smooth",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": false
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Curve Line",
+              "label": "",
+              "type": "GeometryNodeCurvePrimitiveLine",
+              "location": [
+                -170.0,
+                260.0
+              ],
+              "inputs": [
+                {
+                  "name": "Start",
+                  "socket_type": "NodeSocketVectorTranslation",
+                  "is_linked": true
+                },
+                {
+                  "name": "End",
+                  "socket_type": "NodeSocketVectorTranslation",
+                  "is_linked": true
+                },
+                {
+                  "name": "Direction",
+                  "socket_type": "NodeSocketVector",
+                  "is_linked": false,
+                  "default_value": [
+                    0.0,
+                    -1.0,
+                    0.0
+                  ]
+                },
+                {
+                  "name": "Length",
+                  "socket_type": "NodeSocketFloatDistance",
+                  "is_linked": false,
+                  "default_value": 0.30000007152557373
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Curve to Mesh",
+              "label": "",
+              "type": "GeometryNodeCurveToMesh",
+              "location": [
+                -10.00006103515625,
+                260.0
+              ],
+              "inputs": [
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Profile Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Scale",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Fill Caps",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": false
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Math.001",
+              "label": "",
+              "type": "ShaderNodeMath",
+              "location": [
+                -490.0,
+                260.0
+              ],
+              "inputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.5
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Combine XYZ.002",
+              "label": "",
+              "type": "ShaderNodeCombineXYZ",
+              "location": [
+                -330.0,
+                260.0
+              ],
+              "inputs": [
+                {
+                  "name": "X",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Y",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.0
+                },
+                {
+                  "name": "Z",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.0
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Vector",
+                  "socket_type": "NodeSocketVector",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Combine XYZ.003",
+              "label": "",
+              "type": "ShaderNodeCombineXYZ",
+              "location": [
+                -330.0,
+                120.0
+              ],
+              "inputs": [
+                {
+                  "name": "X",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Y",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.0
+                },
+                {
+                  "name": "Z",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.0
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Vector",
+                  "socket_type": "NodeSocketVector",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Extrude Mesh",
+              "label": "",
+              "type": "GeometryNodeExtrudeMesh",
+              "location": [
+                150.0,
+                260.0
+              ],
+              "inputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Selection",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": true
+                },
+                {
+                  "name": "Offset",
+                  "socket_type": "NodeSocketVectorTranslation",
+                  "is_linked": false,
+                  "default_value": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                {
+                  "name": "Offset Scale",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Individual",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": false
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Top",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": false
+                },
+                {
+                  "name": "Side",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": false
+                }
+              ]
+            },
+            {
+              "name": "Set Shade Smooth.002",
+              "label": "",
+              "type": "GeometryNodeSetShadeSmooth",
+              "location": [
+                330.0,
+                260.0
+              ],
+              "inputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Selection",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": true
+                },
+                {
+                  "name": "Shade Smooth",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": false
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Math.003",
+              "label": "",
+              "type": "ShaderNodeMath",
+              "location": [
+                -10.00006103515625,
+                120.0
+              ],
+              "inputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": -1.0
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.5
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Math.002",
+              "label": "",
+              "type": "ShaderNodeMath",
+              "location": [
+                -490.0,
+                100.0
+              ],
+              "inputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.05000000447034836
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.5
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Group Output",
+              "label": "",
+              "type": "NodeGroupOutput",
+              "location": [
+                1100.0,
+                260.0
+              ],
+              "inputs": [
+                {
+                  "name": "Geometry",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Geometry",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "",
+                  "socket_type": "NodeSocketVirtual",
+                  "is_linked": false
+                }
+              ],
+              "outputs": []
+            },
+            {
+              "name": "Named Attribute",
+              "label": "",
+              "type": "GeometryNodeInputNamedAttribute",
+              "location": [
+                125.0,
+                -100.0
+              ],
+              "inputs": [
+                {
+                  "name": "Name",
+                  "socket_type": "NodeSocketString",
+                  "is_linked": false,
+                  "default_value": "radius"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Attribute",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Exists",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Switch",
+              "label": "",
+              "type": "GeometryNodeSwitch",
+              "location": [
+                125.0,
+                -100.0
+              ],
+              "inputs": [
+                {
+                  "name": "Switch",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": true
+                },
+                {
+                  "name": "False",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 1.0
+                },
+                {
+                  "name": "True",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Output",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Named Attribute.001",
+              "label": "",
+              "type": "GeometryNodeInputNamedAttribute",
+              "location": [
+                -35.00006103515625,
+                260.0
+              ],
+              "inputs": [
+                {
+                  "name": "Name",
+                  "socket_type": "NodeSocketString",
+                  "is_linked": false,
+                  "default_value": "radius"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Attribute",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Exists",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Switch.001",
+              "label": "",
+              "type": "GeometryNodeSwitch",
+              "location": [
+                -35.00006103515625,
+                260.0
+              ],
+              "inputs": [
+                {
+                  "name": "Switch",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": true
+                },
+                {
+                  "name": "False",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 1.0
+                },
+                {
+                  "name": "True",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Output",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ]
+            }
+          ],
+          "links": [
+            {
+              "from_node": "Extrude Mesh.001",
+              "from_socket": "Mesh",
+              "to_node": "Set Shade Smooth.003",
+              "to_socket": "Mesh"
+            },
+            {
+              "from_node": "Combine XYZ.002",
+              "from_socket": "Vector",
+              "to_node": "Curve Line",
+              "to_socket": "Start"
+            },
+            {
+              "from_node": "Math.007",
+              "from_socket": "Value",
+              "to_node": "Combine XYZ.005",
+              "to_socket": "X"
+            },
+            {
+              "from_node": "Curve Line",
+              "from_socket": "Curve",
+              "to_node": "Curve to Mesh",
+              "to_socket": "Profile Curve"
+            },
+            {
+              "from_node": "Combine XYZ.003",
+              "from_socket": "Vector",
+              "to_node": "Curve Line",
+              "to_socket": "End"
+            },
+            {
+              "from_node": "Math.006",
+              "from_socket": "Value",
+              "to_node": "Combine XYZ.004",
+              "to_socket": "X"
+            },
+            {
+              "from_node": "Math.003",
+              "from_socket": "Value",
+              "to_node": "Extrude Mesh",
+              "to_socket": "Offset Scale"
+            },
+            {
+              "from_node": "Math.001",
+              "from_socket": "Value",
+              "to_node": "Combine XYZ.002",
+              "to_socket": "X"
+            },
+            {
+              "from_node": "Combine XYZ.005",
+              "from_socket": "Vector",
+              "to_node": "Curve Line.003",
+              "to_socket": "End"
+            },
+            {
+              "from_node": "Math.005",
+              "from_socket": "Value",
+              "to_node": "Math.007",
+              "to_socket": "Value"
+            },
+            {
+              "from_node": "Math.004",
+              "from_socket": "Value",
+              "to_node": "Math.006",
+              "to_socket": "Value"
+            },
+            {
+              "from_node": "Combine XYZ.004",
+              "from_socket": "Vector",
+              "to_node": "Curve Line.003",
+              "to_socket": "Start"
+            },
+            {
+              "from_node": "Curve Line.003",
+              "from_socket": "Curve",
+              "to_node": "Curve to Mesh.001",
+              "to_socket": "Profile Curve"
+            },
+            {
+              "from_node": "Math.002",
+              "from_socket": "Value",
+              "to_node": "Combine XYZ.003",
+              "to_socket": "X"
+            },
+            {
+              "from_node": "Curve to Mesh.001",
+              "from_socket": "Mesh",
+              "to_node": "Extrude Mesh.001",
+              "to_socket": "Mesh"
+            },
+            {
+              "from_node": "Curve to Mesh",
+              "from_socket": "Mesh",
+              "to_node": "Extrude Mesh",
+              "to_socket": "Mesh"
+            },
+            {
+              "from_node": "Extrude Mesh",
+              "from_socket": "Mesh",
+              "to_node": "Set Shade Smooth.002",
+              "to_socket": "Mesh"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "Value",
+              "to_node": "Math.004",
+              "to_socket": "Value"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "Value",
+              "to_node": "Math.001",
+              "to_socket": "Value"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "Curve",
+              "to_node": "Curve to Mesh",
+              "to_socket": "Curve"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "Curve",
+              "to_node": "Curve to Mesh.001",
+              "to_socket": "Curve"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "Value",
+              "to_node": "Math.005",
+              "to_socket": "Value"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "Value",
+              "to_node": "Math.004",
+              "to_socket": "Value"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "Value",
+              "to_node": "Math.001",
+              "to_socket": "Value"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "Value",
+              "to_node": "Math.002",
+              "to_socket": "Value"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "Offset Scale",
+              "to_node": "Extrude Mesh.001",
+              "to_socket": "Offset Scale"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "Offset Scale",
+              "to_node": "Math.003",
+              "to_socket": "Value"
+            },
+            {
+              "from_node": "Set Shade Smooth.003",
+              "from_socket": "Mesh",
+              "to_node": "Group Output",
+              "to_socket": "Geometry"
+            },
+            {
+              "from_node": "Set Shade Smooth.002",
+              "from_socket": "Mesh",
+              "to_node": "Group Output",
+              "to_socket": "Geometry"
+            },
+            {
+              "from_node": "Named Attribute",
+              "from_socket": "Exists",
+              "to_node": "Switch",
+              "to_socket": "Switch"
+            },
+            {
+              "from_node": "Named Attribute",
+              "from_socket": "Attribute",
+              "to_node": "Switch",
+              "to_socket": "True"
+            },
+            {
+              "from_node": "Switch",
+              "from_socket": "Output",
+              "to_node": "Curve to Mesh.001",
+              "to_socket": "Scale"
+            },
+            {
+              "from_node": "Named Attribute.001",
+              "from_socket": "Exists",
+              "to_node": "Switch.001",
+              "to_socket": "Switch"
+            },
+            {
+              "from_node": "Named Attribute.001",
+              "from_socket": "Attribute",
+              "to_node": "Switch.001",
+              "to_socket": "True"
+            },
+            {
+              "from_node": "Switch.001",
+              "from_socket": "Output",
+              "to_node": "Curve to Mesh",
+              "to_socket": "Scale"
+            }
+          ]
+        }
+      },
+      {
+        "name": "Resample Curve",
+        "label": "",
+        "type": "GeometryNodeResampleCurve",
+        "location": [
+          -1720.0001220703125,
+          -240.00001525878906
+        ],
+        "inputs": [
+          {
+            "name": "Curve",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          },
+          {
+            "name": "Selection",
+            "socket_type": "NodeSocketBool",
+            "is_linked": false,
+            "default_value": true
+          },
+          {
+            "name": "Mode",
+            "socket_type": "NodeSocketMenu",
+            "is_linked": false,
+            "default_value": "Length"
+          },
+          {
+            "name": "Count",
+            "socket_type": "NodeSocketInt",
+            "is_linked": false,
+            "default_value": 10
+          },
+          {
+            "name": "Length",
+            "socket_type": "NodeSocketFloatDistance",
+            "is_linked": true
+          }
+        ],
+        "outputs": [
+          {
+            "name": "Curve",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          }
+        ]
+      },
+      {
+        "name": "Delete Geometry.001",
+        "label": "",
+        "type": "GeometryNodeDeleteGeometry",
+        "location": [
+          -1720.0001220703125,
+          -400.0
+        ],
+        "inputs": [
+          {
+            "name": "Geometry",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          },
+          {
+            "name": "Selection",
+            "socket_type": "NodeSocketBool",
+            "is_linked": true
+          }
+        ],
+        "outputs": [
+          {
+            "name": "Geometry",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          }
+        ]
+      },
+      {
+        "name": "Group.001",
+        "label": "",
+        "type": "GeometryNodeGroup",
+        "location": [
+          -1200.0,
+          -400.0
+        ],
+        "inputs": [
+          {
+            "name": "X",
+            "socket_type": "NodeSocketFloat",
+            "is_linked": true
+          },
+          {
+            "name": "Curve",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          },
+          {
+            "name": "Value",
+            "socket_type": "NodeSocketFloat",
+            "is_linked": true
+          },
+          {
+            "name": "Offset Scale",
+            "socket_type": "NodeSocketFloat",
+            "is_linked": true
+          }
+        ],
+        "outputs": [
+          {
+            "name": "Geometry",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          },
+          {
+            "name": "Geometry",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          }
+        ],
+        "subtree": {
+          "tree_name": "Sidewalk",
+          "nodes": [
+            {
+              "name": "Group Output",
+              "label": "",
+              "type": "NodeGroupOutput",
+              "location": [
+                590.0000610351562,
+                0.0
+              ],
+              "inputs": [
+                {
+                  "name": "Geometry",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Geometry",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "",
+                  "socket_type": "NodeSocketVirtual",
+                  "is_linked": false
+                }
+              ],
+              "outputs": []
+            },
+            {
+              "name": "Combine XYZ.001",
+              "label": "",
+              "type": "ShaderNodeCombineXYZ",
+              "location": [
+                -79.99993896484375,
+                130.0
+              ],
+              "inputs": [
+                {
+                  "name": "X",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Y",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.0
+                },
+                {
+                  "name": "Z",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.0
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Vector",
+                  "socket_type": "NodeSocketVector",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Combine XYZ",
+              "label": "",
+              "type": "ShaderNodeCombineXYZ",
+              "location": [
+                -79.99993896484375,
+                270.0
+              ],
+              "inputs": [
+                {
+                  "name": "X",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Y",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.0
+                },
+                {
+                  "name": "Z",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.0
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Vector",
+                  "socket_type": "NodeSocketVector",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Curve to Mesh",
+              "label": "",
+              "type": "GeometryNodeCurveToMesh",
+              "location": [
+                80.00006103515625,
+                270.0
+              ],
+              "inputs": [
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Profile Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Scale",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Fill Caps",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": false
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Set Shade Smooth",
+              "label": "",
+              "type": "GeometryNodeSetShadeSmooth",
+              "location": [
+                400.00006103515625,
+                270.0
+              ],
+              "inputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Selection",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": true
+                },
+                {
+                  "name": "Shade Smooth",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": false
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Curve Line.001",
+              "label": "",
+              "type": "GeometryNodeCurvePrimitiveLine",
+              "location": [
+                80.00006103515625,
+                -250.00006103515625
+              ],
+              "inputs": [
+                {
+                  "name": "Start",
+                  "socket_type": "NodeSocketVectorTranslation",
+                  "is_linked": true
+                },
+                {
+                  "name": "End",
+                  "socket_type": "NodeSocketVectorTranslation",
+                  "is_linked": true
+                },
+                {
+                  "name": "Direction",
+                  "socket_type": "NodeSocketVector",
+                  "is_linked": false,
+                  "default_value": [
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                {
+                  "name": "Length",
+                  "socket_type": "NodeSocketFloatDistance",
+                  "is_linked": false,
+                  "default_value": 1.0
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Extrude Mesh.001",
+              "label": "",
+              "type": "GeometryNodeExtrudeMesh",
+              "location": [
+                240.00006103515625,
+                -110.0
+              ],
+              "inputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Selection",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": true
+                },
+                {
+                  "name": "Offset",
+                  "socket_type": "NodeSocketVectorTranslation",
+                  "is_linked": false,
+                  "default_value": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                {
+                  "name": "Offset Scale",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Individual",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": false
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Top",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": false
+                },
+                {
+                  "name": "Side",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": false
+                }
+              ]
+            },
+            {
+              "name": "Set Shade Smooth.001",
+              "label": "",
+              "type": "GeometryNodeSetShadeSmooth",
+              "location": [
+                400.00006103515625,
+                -110.0
+              ],
+              "inputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Selection",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": true
+                },
+                {
+                  "name": "Shade Smooth",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": false
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Combine XYZ.003",
+              "label": "",
+              "type": "ShaderNodeCombineXYZ",
+              "location": [
+                -79.99993896484375,
+                -110.0
+              ],
+              "inputs": [
+                {
+                  "name": "X",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Y",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.0
+                },
+                {
+                  "name": "Z",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.0
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Vector",
+                  "socket_type": "NodeSocketVector",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Math",
+              "label": "",
+              "type": "ShaderNodeMath",
+              "location": [
+                -239.99993896484375,
+                130.0
+              ],
+              "inputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.5
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Combine XYZ.002",
+              "label": "",
+              "type": "ShaderNodeCombineXYZ",
+              "location": [
+                -79.99993896484375,
+                -250.00006103515625
+              ],
+              "inputs": [
+                {
+                  "name": "X",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Y",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.0
+                },
+                {
+                  "name": "Z",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.0
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Vector",
+                  "socket_type": "NodeSocketVector",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Math.002",
+              "label": "",
+              "type": "ShaderNodeMath",
+              "location": [
+                -400.00006103515625,
+                -250.00006103515625
+              ],
+              "inputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": -1.0
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Math.001",
+              "label": "",
+              "type": "ShaderNodeMath",
+              "location": [
+                -239.99993896484375,
+                -110.0
+              ],
+              "inputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": -1.0
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.5
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Extrude Mesh",
+              "label": "",
+              "type": "GeometryNodeExtrudeMesh",
+              "location": [
+                240.00006103515625,
+                270.0
+              ],
+              "inputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Selection",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": true
+                },
+                {
+                  "name": "Offset",
+                  "socket_type": "NodeSocketVectorTranslation",
+                  "is_linked": false,
+                  "default_value": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                },
+                {
+                  "name": "Offset Scale",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Individual",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": false
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Top",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": false
+                },
+                {
+                  "name": "Side",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": false
+                }
+              ]
+            },
+            {
+              "name": "Math.004",
+              "label": "",
+              "type": "ShaderNodeMath",
+              "location": [
+                -239.99993896484375,
+                -270.00006103515625
+              ],
+              "inputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": -1.0
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.5
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Math.005",
+              "label": "",
+              "type": "ShaderNodeMath",
+              "location": [
+                80.0,
+                -380.0000305175781
+              ],
+              "inputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": -1.0
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.5
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Curve Line",
+              "label": "",
+              "type": "GeometryNodeCurvePrimitiveLine",
+              "location": [
+                80.00006103515625,
+                130.0
+              ],
+              "inputs": [
+                {
+                  "name": "Start",
+                  "socket_type": "NodeSocketVectorTranslation",
+                  "is_linked": true
+                },
+                {
+                  "name": "End",
+                  "socket_type": "NodeSocketVectorTranslation",
+                  "is_linked": true
+                },
+                {
+                  "name": "Direction",
+                  "socket_type": "NodeSocketVector",
+                  "is_linked": false,
+                  "default_value": [
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                {
+                  "name": "Length",
+                  "socket_type": "NodeSocketFloatDistance",
+                  "is_linked": false,
+                  "default_value": 1.0
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Group Input",
+              "label": "",
+              "type": "NodeGroupInput",
+              "location": [
+                -1060.0,
+                240.00001525878906
+              ],
+              "inputs": [],
+              "outputs": [
+                {
+                  "name": "X",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Offset Scale",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "",
+                  "socket_type": "NodeSocketVirtual",
+                  "is_linked": false
+                }
+              ]
+            },
+            {
+              "name": "Spline Parameter",
+              "label": "",
+              "type": "GeometryNodeSplineParameter",
+              "location": [
+                -1060.0,
+                80.0
+              ],
+              "inputs": [],
+              "outputs": [
+                {
+                  "name": "Factor",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Length",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Index",
+                  "socket_type": "NodeSocketInt",
+                  "is_linked": false,
+                  "default_value": 0
+                }
+              ]
+            },
+            {
+              "name": "Store Named Attribute.001",
+              "label": "",
+              "type": "GeometryNodeStoreNamedAttribute",
+              "location": [
+                -880.0,
+                -60.000003814697266
+              ],
+              "inputs": [
+                {
+                  "name": "Geometry",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Selection",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": true
+                },
+                {
+                  "name": "Name",
+                  "socket_type": "NodeSocketString",
+                  "is_linked": false,
+                  "default_value": "Y"
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Geometry",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Curve to Mesh.001",
+              "label": "",
+              "type": "GeometryNodeCurveToMesh",
+              "location": [
+                80.00006103515625,
+                -110.0
+              ],
+              "inputs": [
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Profile Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Scale",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Fill Caps",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": false
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Store Named Attribute.002",
+              "label": "",
+              "type": "GeometryNodeStoreNamedAttribute",
+              "location": [
+                -880.0,
+                -280.0
+              ],
+              "inputs": [
+                {
+                  "name": "Geometry",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Selection",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": true
+                },
+                {
+                  "name": "Name",
+                  "socket_type": "NodeSocketString",
+                  "is_linked": false,
+                  "default_value": "Y"
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Geometry",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Store Named Attribute",
+              "label": "",
+              "type": "GeometryNodeStoreNamedAttribute",
+              "location": [
+                -880.0,
+                140.0
+              ],
+              "inputs": [
+                {
+                  "name": "Geometry",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Selection",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": true
+                },
+                {
+                  "name": "Name",
+                  "socket_type": "NodeSocketString",
+                  "is_linked": false,
+                  "default_value": "X"
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Geometry",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Named Attribute",
+              "label": "",
+              "type": "GeometryNodeInputNamedAttribute",
+              "location": [
+                55.00006103515625,
+                -110.0
+              ],
+              "inputs": [
+                {
+                  "name": "Name",
+                  "socket_type": "NodeSocketString",
+                  "is_linked": false,
+                  "default_value": "radius"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Attribute",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Exists",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Switch",
+              "label": "",
+              "type": "GeometryNodeSwitch",
+              "location": [
+                55.00006103515625,
+                -110.0
+              ],
+              "inputs": [
+                {
+                  "name": "Switch",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": true
+                },
+                {
+                  "name": "False",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 1.0
+                },
+                {
+                  "name": "True",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Output",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Named Attribute.001",
+              "label": "",
+              "type": "GeometryNodeInputNamedAttribute",
+              "location": [
+                55.00006103515625,
+                270.0
+              ],
+              "inputs": [
+                {
+                  "name": "Name",
+                  "socket_type": "NodeSocketString",
+                  "is_linked": false,
+                  "default_value": "radius"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Attribute",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Exists",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Switch.001",
+              "label": "",
+              "type": "GeometryNodeSwitch",
+              "location": [
+                55.00006103515625,
+                270.0
+              ],
+              "inputs": [
+                {
+                  "name": "Switch",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": true
+                },
+                {
+                  "name": "False",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 1.0
+                },
+                {
+                  "name": "True",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Output",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ]
+            }
+          ],
+          "links": [
+            {
+              "from_node": "Combine XYZ.003",
+              "from_socket": "Vector",
+              "to_node": "Curve Line.001",
+              "to_socket": "Start"
+            },
+            {
+              "from_node": "Math.002",
+              "from_socket": "Value",
+              "to_node": "Math.004",
+              "to_socket": "Value"
+            },
+            {
+              "from_node": "Math",
+              "from_socket": "Value",
+              "to_node": "Combine XYZ.001",
+              "to_socket": "X"
+            },
+            {
+              "from_node": "Math.001",
+              "from_socket": "Value",
+              "to_node": "Combine XYZ.003",
+              "to_socket": "X"
+            },
+            {
+              "from_node": "Extrude Mesh.001",
+              "from_socket": "Mesh",
+              "to_node": "Set Shade Smooth.001",
+              "to_socket": "Mesh"
+            },
+            {
+              "from_node": "Curve to Mesh.001",
+              "from_socket": "Mesh",
+              "to_node": "Extrude Mesh.001",
+              "to_socket": "Mesh"
+            },
+            {
+              "from_node": "Combine XYZ.001",
+              "from_socket": "Vector",
+              "to_node": "Curve Line",
+              "to_socket": "End"
+            },
+            {
+              "from_node": "Combine XYZ",
+              "from_socket": "Vector",
+              "to_node": "Curve Line",
+              "to_socket": "Start"
+            },
+            {
+              "from_node": "Extrude Mesh",
+              "from_socket": "Mesh",
+              "to_node": "Set Shade Smooth",
+              "to_socket": "Mesh"
+            },
+            {
+              "from_node": "Curve to Mesh",
+              "from_socket": "Mesh",
+              "to_node": "Extrude Mesh",
+              "to_socket": "Mesh"
+            },
+            {
+              "from_node": "Combine XYZ.002",
+              "from_socket": "Vector",
+              "to_node": "Curve Line.001",
+              "to_socket": "End"
+            },
+            {
+              "from_node": "Math.004",
+              "from_socket": "Value",
+              "to_node": "Combine XYZ.002",
+              "to_socket": "X"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "X",
+              "to_node": "Combine XYZ",
+              "to_socket": "X"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "X",
+              "to_node": "Math",
+              "to_socket": "Value"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "X",
+              "to_node": "Math.002",
+              "to_socket": "Value"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "X",
+              "to_node": "Math.001",
+              "to_socket": "Value"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "Value",
+              "to_node": "Math",
+              "to_socket": "Value"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "Value",
+              "to_node": "Math.002",
+              "to_socket": "Value"
+            },
+            {
+              "from_node": "Set Shade Smooth",
+              "from_socket": "Mesh",
+              "to_node": "Group Output",
+              "to_socket": "Geometry"
+            },
+            {
+              "from_node": "Set Shade Smooth.001",
+              "from_socket": "Mesh",
+              "to_node": "Group Output",
+              "to_socket": "Geometry"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "Offset Scale",
+              "to_node": "Extrude Mesh",
+              "to_socket": "Offset Scale"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "Offset Scale",
+              "to_node": "Math.005",
+              "to_socket": "Value"
+            },
+            {
+              "from_node": "Math.005",
+              "from_socket": "Value",
+              "to_node": "Extrude Mesh.001",
+              "to_socket": "Offset Scale"
+            },
+            {
+              "from_node": "Spline Parameter",
+              "from_socket": "Length",
+              "to_node": "Store Named Attribute",
+              "to_socket": "Value"
+            },
+            {
+              "from_node": "Spline Parameter",
+              "from_socket": "Factor",
+              "to_node": "Store Named Attribute.001",
+              "to_socket": "Value"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "Curve",
+              "to_node": "Store Named Attribute",
+              "to_socket": "Geometry"
+            },
+            {
+              "from_node": "Store Named Attribute",
+              "from_socket": "Geometry",
+              "to_node": "Curve to Mesh",
+              "to_socket": "Curve"
+            },
+            {
+              "from_node": "Curve Line",
+              "from_socket": "Curve",
+              "to_node": "Store Named Attribute.001",
+              "to_socket": "Geometry"
+            },
+            {
+              "from_node": "Store Named Attribute.001",
+              "from_socket": "Geometry",
+              "to_node": "Curve to Mesh",
+              "to_socket": "Profile Curve"
+            },
+            {
+              "from_node": "Store Named Attribute",
+              "from_socket": "Geometry",
+              "to_node": "Curve to Mesh.001",
+              "to_socket": "Curve"
+            },
+            {
+              "from_node": "Curve Line.001",
+              "from_socket": "Curve",
+              "to_node": "Store Named Attribute.002",
+              "to_socket": "Geometry"
+            },
+            {
+              "from_node": "Store Named Attribute.002",
+              "from_socket": "Geometry",
+              "to_node": "Curve to Mesh.001",
+              "to_socket": "Profile Curve"
+            },
+            {
+              "from_node": "Spline Parameter",
+              "from_socket": "Factor",
+              "to_node": "Store Named Attribute.002",
+              "to_socket": "Value"
+            },
+            {
+              "from_node": "Named Attribute",
+              "from_socket": "Exists",
+              "to_node": "Switch",
+              "to_socket": "Switch"
+            },
+            {
+              "from_node": "Named Attribute",
+              "from_socket": "Attribute",
+              "to_node": "Switch",
+              "to_socket": "True"
+            },
+            {
+              "from_node": "Switch",
+              "from_socket": "Output",
+              "to_node": "Curve to Mesh.001",
+              "to_socket": "Scale"
+            },
+            {
+              "from_node": "Named Attribute.001",
+              "from_socket": "Exists",
+              "to_node": "Switch.001",
+              "to_socket": "Switch"
+            },
+            {
+              "from_node": "Named Attribute.001",
+              "from_socket": "Attribute",
+              "to_node": "Switch.001",
+              "to_socket": "True"
+            },
+            {
+              "from_node": "Switch.001",
+              "from_socket": "Output",
+              "to_node": "Curve to Mesh",
+              "to_socket": "Scale"
+            }
+          ]
+        }
+      },
+      {
+        "name": "Set Material.004",
+        "label": "",
+        "type": "GeometryNodeSetMaterial",
+        "location": [
+          -860.0000610351562,
+          -400.0
+        ],
+        "inputs": [
+          {
+            "name": "Geometry",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          },
+          {
+            "name": "Selection",
+            "socket_type": "NodeSocketBool",
+            "is_linked": false,
+            "default_value": true
+          },
+          {
+            "name": "Material",
+            "socket_type": "NodeSocketMaterial",
+            "is_linked": false,
+            "default_value": "<bpy_struct, Material(\"Sidewalk\") at 0x753e11d70920>"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "Geometry",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          }
+        ]
+      },
+      {
+        "name": "Group Input",
+        "label": "",
+        "type": "NodeGroupInput",
+        "location": [
+          -1720.0001220703125,
+          360.0
+        ],
+        "inputs": [],
+        "outputs": [
+          {
+            "name": "Geometry",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          },
+          {
+            "name": "Resolution",
+            "socket_type": "NodeSocketInt",
+            "is_linked": true
+          },
+          {
+            "name": "Lane width",
+            "socket_type": "NodeSocketFloat",
+            "is_linked": true
+          },
+          {
+            "name": "Border width",
+            "socket_type": "NodeSocketFloat",
+            "is_linked": true
+          },
+          {
+            "name": "Border height",
+            "socket_type": "NodeSocketFloat",
+            "is_linked": true
+          },
+          {
+            "name": "Rail Height",
+            "socket_type": "NodeSocketFloatDistance",
+            "is_linked": true
+          },
+          {
+            "name": "Radius",
+            "socket_type": "NodeSocketFloatDistance",
+            "is_linked": true
+          },
+          {
+            "name": "Resolution",
+            "socket_type": "NodeSocketInt",
+            "is_linked": true
+          },
+          {
+            "name": "Rail and separator distance",
+            "socket_type": "NodeSocketFloatDistance",
+            "is_linked": true
+          },
+          {
+            "name": "Rail pole and separator delete",
+            "socket_type": "NodeSocketFloatFactor",
+            "is_linked": true
+          },
+          {
+            "name": "Delete seed",
+            "socket_type": "NodeSocketInt",
+            "is_linked": true
+          },
+          {
+            "name": "Sidewalk width",
+            "socket_type": "NodeSocketFloat",
+            "is_linked": true
+          },
+          {
+            "name": "Sidewalk height",
+            "socket_type": "NodeSocketFloat",
+            "is_linked": true
+          },
+          {
+            "name": "Separator height",
+            "socket_type": "NodeSocketFloat",
+            "is_linked": false,
+            "default_value": 1.2000000476837158
+          },
+          {
+            "name": "Separator width",
+            "socket_type": "NodeSocketFloat",
+            "is_linked": false,
+            "default_value": 0.1499999761581421
+          },
+          {
+            "name": "Separator lenght",
+            "socket_type": "NodeSocketFloat",
+            "is_linked": false,
+            "default_value": 0.5000000596046448
+          },
+          {
+            "name": "Road texture strech",
+            "socket_type": "NodeSocketFloat",
+            "is_linked": true
+          },
+          {
+            "name": "",
+            "socket_type": "NodeSocketVirtual",
+            "is_linked": false
+          }
+        ]
+      },
+      {
+        "name": "Main Road",
+        "label": "",
+        "type": "GeometryNodeGroup",
+        "location": [
+          -1200.0,
+          320.0
+        ],
+        "inputs": [
+          {
+            "name": "X",
+            "socket_type": "NodeSocketFloat",
+            "is_linked": true
+          },
+          {
+            "name": "Curve",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          },
+          {
+            "name": "Cuts",
+            "socket_type": "NodeSocketInt",
+            "is_linked": true
+          },
+          {
+            "name": "Value",
+            "socket_type": "NodeSocketFloat",
+            "is_linked": true
+          }
+        ],
+        "outputs": [
+          {
+            "name": "Mesh",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": true
+          },
+          {
+            "name": "Curve",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": false
+          },
+          {
+            "name": "Curve",
+            "socket_type": "NodeSocketGeometry",
+            "is_linked": false
+          }
+        ],
+        "subtree": {
+          "tree_name": "Main Road",
+          "nodes": [
+            {
+              "name": "Curve Line.001",
+              "label": "",
+              "type": "GeometryNodeCurvePrimitiveLine",
+              "location": [
+                80.0,
+                140.0
+              ],
+              "inputs": [
+                {
+                  "name": "Start",
+                  "socket_type": "NodeSocketVectorTranslation",
+                  "is_linked": true
+                },
+                {
+                  "name": "End",
+                  "socket_type": "NodeSocketVectorTranslation",
+                  "is_linked": true
+                },
+                {
+                  "name": "Direction",
+                  "socket_type": "NodeSocketVector",
+                  "is_linked": false,
+                  "default_value": [
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                {
+                  "name": "Length",
+                  "socket_type": "NodeSocketFloatDistance",
+                  "is_linked": false,
+                  "default_value": 1.0
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Combine XYZ.001",
+              "label": "",
+              "type": "ShaderNodeCombineXYZ",
+              "location": [
+                -80.0,
+                0.0
+              ],
+              "inputs": [
+                {
+                  "name": "X",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Y",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.0
+                },
+                {
+                  "name": "Z",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.0
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Vector",
+                  "socket_type": "NodeSocketVector",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Combine XYZ",
+              "label": "",
+              "type": "ShaderNodeCombineXYZ",
+              "location": [
+                -80.0,
+                140.0
+              ],
+              "inputs": [
+                {
+                  "name": "X",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Y",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.0
+                },
+                {
+                  "name": "Z",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.0
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Vector",
+                  "socket_type": "NodeSocketVector",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Subdivide Curve",
+              "label": "",
+              "type": "GeometryNodeSubdivideCurve",
+              "location": [
+                131.14659118652344,
+                -144.71786499023438
+              ],
+              "inputs": [
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Cuts",
+                  "socket_type": "NodeSocketInt",
+                  "is_linked": true
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Group Output",
+              "label": "",
+              "type": "NodeGroupOutput",
+              "location": [
+                939.1898803710938,
+                140.0
+              ],
+              "inputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "",
+                  "socket_type": "NodeSocketVirtual",
+                  "is_linked": false
+                }
+              ],
+              "outputs": []
+            },
+            {
+              "name": "Curve to Mesh.002",
+              "label": "",
+              "type": "GeometryNodeCurveToMesh",
+              "location": [
+                699.1898803710938,
+                140.0
+              ],
+              "inputs": [
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Profile Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Scale",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Fill Caps",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": false
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Mesh",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Math",
+              "label": "",
+              "type": "ShaderNodeMath",
+              "location": [
+                -277.6946105957031,
+                140.0
+              ],
+              "inputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": -1.0
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.5
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Group Input",
+              "label": "",
+              "type": "NodeGroupInput",
+              "location": [
+                -860.0000610351562,
+                140.0
+              ],
+              "inputs": [],
+              "outputs": [
+                {
+                  "name": "X",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Curve",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Cuts",
+                  "socket_type": "NodeSocketInt",
+                  "is_linked": true
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.5
+                },
+                {
+                  "name": "",
+                  "socket_type": "NodeSocketVirtual",
+                  "is_linked": false
+                }
+              ]
+            },
+            {
+              "name": "Spline Parameter",
+              "label": "",
+              "type": "GeometryNodeSplineParameter",
+              "location": [
+                -660.0,
+                -300.0
+              ],
+              "inputs": [],
+              "outputs": [
+                {
+                  "name": "Factor",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Length",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Index",
+                  "socket_type": "NodeSocketInt",
+                  "is_linked": false,
+                  "default_value": 0
+                }
+              ]
+            },
+            {
+              "name": "Math.002",
+              "label": "",
+              "type": "ShaderNodeMath",
+              "location": [
+                -400.0,
+                -260.0
+              ],
+              "inputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.5
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 0.5
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Store Named Attribute",
+              "label": "",
+              "type": "GeometryNodeStoreNamedAttribute",
+              "location": [
+                -60.65825653076172,
+                -140.0
+              ],
+              "inputs": [
+                {
+                  "name": "Geometry",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Selection",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": true
+                },
+                {
+                  "name": "Name",
+                  "socket_type": "NodeSocketString",
+                  "is_linked": false,
+                  "default_value": "X"
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Geometry",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Store Named Attribute.001",
+              "label": "",
+              "type": "GeometryNodeStoreNamedAttribute",
+              "location": [
+                240.00001525878906,
+                140.0
+              ],
+              "inputs": [
+                {
+                  "name": "Geometry",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                },
+                {
+                  "name": "Selection",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": false,
+                  "default_value": true
+                },
+                {
+                  "name": "Name",
+                  "socket_type": "NodeSocketString",
+                  "is_linked": false,
+                  "default_value": "Y"
+                },
+                {
+                  "name": "Value",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Geometry",
+                  "socket_type": "NodeSocketGeometry",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Named Attribute",
+              "label": "",
+              "type": "GeometryNodeInputNamedAttribute",
+              "location": [
+                674.1898803710938,
+                140.0
+              ],
+              "inputs": [
+                {
+                  "name": "Name",
+                  "socket_type": "NodeSocketString",
+                  "is_linked": false,
+                  "default_value": "radius"
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Attribute",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                },
+                {
+                  "name": "Exists",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": true
+                }
+              ]
+            },
+            {
+              "name": "Switch",
+              "label": "",
+              "type": "GeometryNodeSwitch",
+              "location": [
+                674.1898803710938,
+                140.0
+              ],
+              "inputs": [
+                {
+                  "name": "Switch",
+                  "socket_type": "NodeSocketBool",
+                  "is_linked": true
+                },
+                {
+                  "name": "False",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": false,
+                  "default_value": 1.0
+                },
+                {
+                  "name": "True",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "Output",
+                  "socket_type": "NodeSocketFloat",
+                  "is_linked": true
+                }
+              ]
+            }
+          ],
+          "links": [
+            {
+              "from_node": "Combine XYZ",
+              "from_socket": "Vector",
+              "to_node": "Curve Line.001",
+              "to_socket": "Start"
+            },
+            {
+              "from_node": "Subdivide Curve",
+              "from_socket": "Curve",
+              "to_node": "Curve to Mesh.002",
+              "to_socket": "Curve"
+            },
+            {
+              "from_node": "Combine XYZ.001",
+              "from_socket": "Vector",
+              "to_node": "Curve Line.001",
+              "to_socket": "End"
+            },
+            {
+              "from_node": "Store Named Attribute.001",
+              "from_socket": "Geometry",
+              "to_node": "Curve to Mesh.002",
+              "to_socket": "Profile Curve"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "X",
+              "to_node": "Math",
+              "to_socket": "Value"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "Cuts",
+              "to_node": "Subdivide Curve",
+              "to_socket": "Cuts"
+            },
+            {
+              "from_node": "Store Named Attribute",
+              "from_socket": "Geometry",
+              "to_node": "Subdivide Curve",
+              "to_socket": "Curve"
+            },
+            {
+              "from_node": "Curve to Mesh.002",
+              "from_socket": "Mesh",
+              "to_node": "Group Output",
+              "to_socket": "Mesh"
+            },
+            {
+              "from_node": "Subdivide Curve",
+              "from_socket": "Curve",
+              "to_node": "Group Output",
+              "to_socket": "Curve"
+            },
+            {
+              "from_node": "Subdivide Curve",
+              "from_socket": "Curve",
+              "to_node": "Group Output",
+              "to_socket": "Curve"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "Curve",
+              "to_node": "Store Named Attribute",
+              "to_socket": "Geometry"
+            },
+            {
+              "from_node": "Curve Line.001",
+              "from_socket": "Curve",
+              "to_node": "Store Named Attribute.001",
+              "to_socket": "Geometry"
+            },
+            {
+              "from_node": "Math.002",
+              "from_socket": "Value",
+              "to_node": "Store Named Attribute.001",
+              "to_socket": "Value"
+            },
+            {
+              "from_node": "Spline Parameter",
+              "from_socket": "Factor",
+              "to_node": "Math.002",
+              "to_socket": "Value"
+            },
+            {
+              "from_node": "Named Attribute",
+              "from_socket": "Exists",
+              "to_node": "Switch",
+              "to_socket": "Switch"
+            },
+            {
+              "from_node": "Named Attribute",
+              "from_socket": "Attribute",
+              "to_node": "Switch",
+              "to_socket": "True"
+            },
+            {
+              "from_node": "Switch",
+              "from_socket": "Output",
+              "to_node": "Curve to Mesh.002",
+              "to_socket": "Scale"
+            },
+            {
+              "from_node": "Spline Parameter",
+              "from_socket": "Length",
+              "to_node": "Store Named Attribute",
+              "to_socket": "Value"
+            },
+            {
+              "from_node": "Math",
+              "from_socket": "Value",
+              "to_node": "Combine XYZ",
+              "to_socket": "X"
+            },
+            {
+              "from_node": "Group Input",
+              "from_socket": "X",
+              "to_node": "Combine XYZ.001",
+              "to_socket": "X"
+            }
+          ]
+        }
+      }
+    ],
+    "links": [
+      {
+        "from_node": "Join Geometry",
+        "from_socket": "Geometry",
+        "to_node": "Group Output",
+        "to_socket": "Geometry"
+      },
+      {
+        "from_node": "Group Input",
+        "from_socket": "Lane width",
+        "to_node": "Main Road",
+        "to_socket": "X"
+      },
+      {
+        "from_node": "Group Input",
+        "from_socket": "Resolution",
+        "to_node": "Main Road",
+        "to_socket": "Cuts"
+      },
+      {
+        "from_node": "Group Input",
+        "from_socket": "Geometry",
+        "to_node": "Main Road",
+        "to_socket": "Curve"
+      },
+      {
+        "from_node": "Group Input",
+        "from_socket": "Border width",
+        "to_node": "Borders",
+        "to_socket": "Value"
+      },
+      {
+        "from_node": "Group Input",
+        "from_socket": "Lane width",
+        "to_node": "Borders",
+        "to_socket": "Value"
+      },
+      {
+        "from_node": "Group Input",
+        "from_socket": "Border height",
+        "to_node": "Borders",
+        "to_socket": "Offset Scale"
+      },
+      {
+        "from_node": "Group Input",
+        "from_socket": "Resolution",
+        "to_node": "Subdivide Curve",
+        "to_socket": "Cuts"
+      },
+      {
+        "from_node": "Group Input",
+        "from_socket": "Geometry",
+        "to_node": "Subdivide Curve",
+        "to_socket": "Curve"
+      },
+      {
+        "from_node": "Group Input",
+        "from_socket": "Rail Height",
+        "to_node": "Group",
+        "to_socket": "Length"
+      },
+      {
+        "from_node": "Group Input",
+        "from_socket": "Border height",
+        "to_node": "Group",
+        "to_socket": "Value"
+      },
+      {
+        "from_node": "Group Input",
+        "from_socket": "Lane width",
+        "to_node": "Group",
+        "to_socket": "X"
+      },
+      {
+        "from_node": "Group Input",
+        "from_socket": "Radius",
+        "to_node": "Group",
+        "to_socket": "Radius"
+      },
+      {
+        "from_node": "Group Input",
+        "from_socket": "Resolution",
+        "to_node": "Group",
+        "to_socket": "Resolution"
+      },
+      {
+        "from_node": "Set Material",
+        "from_socket": "Geometry",
+        "to_node": "Join Geometry",
+        "to_socket": "Geometry"
+      },
+      {
+        "from_node": "Random Value",
+        "from_socket": "Value",
+        "to_node": "Delete Geometry.001",
+        "to_socket": "Selection"
+      },
+      {
+        "from_node": "Resample Curve",
+        "from_socket": "Curve",
+        "to_node": "Delete Geometry.001",
+        "to_socket": "Geometry"
+      },
+      {
+        "from_node": "Delete Geometry.001",
+        "from_socket": "Geometry",
+        "to_node": "Group",
+        "to_socket": "Curve"
+      },
+      {
+        "from_node": "Subdivide Curve",
+        "from_socket": "Curve",
+        "to_node": "Resample Curve",
+        "to_socket": "Curve"
+      },
+      {
+        "from_node": "Delete Geometry.001",
+        "from_socket": "Geometry",
+        "to_node": "Borders",
+        "to_socket": "Curve"
+      },
+      {
+        "from_node": "Delete Geometry.001",
+        "from_socket": "Geometry",
+        "to_node": "Borders",
+        "to_socket": "Curve"
+      },
+      {
+        "from_node": "Group Input",
+        "from_socket": "Rail and separator distance",
+        "to_node": "Resample Curve",
+        "to_socket": "Length"
+      },
+      {
+        "from_node": "Group Input",
+        "from_socket": "Rail pole and separator delete",
+        "to_node": "Random Value",
+        "to_socket": "Probability"
+      },
+      {
+        "from_node": "Group Input",
+        "from_socket": "Delete seed",
+        "to_node": "Random Value",
+        "to_socket": "Seed"
+      },
+      {
+        "from_node": "Group Input",
+        "from_socket": "Lane width",
+        "to_node": "Group.001",
+        "to_socket": "X"
+      },
+      {
+        "from_node": "Group Input",
+        "from_socket": "Sidewalk width",
+        "to_node": "Group.001",
+        "to_socket": "Value"
+      },
+      {
+        "from_node": "Subdivide Curve",
+        "from_socket": "Curve",
+        "to_node": "Group.001",
+        "to_socket": "Curve"
+      },
+      {
+        "from_node": "Group Input",
+        "from_socket": "Sidewalk height",
+        "to_node": "Group.001",
+        "to_socket": "Offset Scale"
+      },
+      {
+        "from_node": "Main Road",
+        "from_socket": "Mesh",
+        "to_node": "Set Material",
+        "to_socket": "Geometry"
+      },
+      {
+        "from_node": "Borders",
+        "from_socket": "Geometry",
+        "to_node": "Join Geometry.001",
+        "to_socket": "Geometry"
+      },
+      {
+        "from_node": "Borders",
+        "from_socket": "Geometry",
+        "to_node": "Join Geometry.001",
+        "to_socket": "Geometry"
+      },
+      {
+        "from_node": "Set Material.002",
+        "from_socket": "Geometry",
+        "to_node": "Join Geometry",
+        "to_socket": "Geometry"
+      },
+      {
+        "from_node": "Join Geometry.001",
+        "from_socket": "Geometry",
+        "to_node": "Set Material.002",
+        "to_socket": "Geometry"
+      },
+      {
+        "from_node": "Join Geometry.002",
+        "from_socket": "Geometry",
+        "to_node": "Set Material.003",
+        "to_socket": "Geometry"
+      },
+      {
+        "from_node": "Group",
+        "from_socket": "Geometry",
+        "to_node": "Join Geometry.002",
+        "to_socket": "Geometry"
+      },
+      {
+        "from_node": "Group",
+        "from_socket": "Geometry",
+        "to_node": "Join Geometry.002",
+        "to_socket": "Geometry"
+      },
+      {
+        "from_node": "Set Material.003",
+        "from_socket": "Geometry",
+        "to_node": "Join Geometry",
+        "to_socket": "Geometry"
+      },
+      {
+        "from_node": "Join Geometry.003",
+        "from_socket": "Geometry",
+        "to_node": "Set Material.004",
+        "to_socket": "Geometry"
+      },
+      {
+        "from_node": "Group.001",
+        "from_socket": "Geometry",
+        "to_node": "Join Geometry.003",
+        "to_socket": "Geometry"
+      },
+      {
+        "from_node": "Group.001",
+        "from_socket": "Geometry",
+        "to_node": "Join Geometry.003",
+        "to_socket": "Geometry"
+      },
+      {
+        "from_node": "Set Material.004",
+        "from_socket": "Geometry",
+        "to_node": "Join Geometry",
+        "to_socket": "Geometry"
+      },
+      {
+        "from_node": "Join Geometry",
+        "from_socket": "Geometry",
+        "to_node": "Viewer",
+        "to_socket": "Geometry"
+      },
+      {
+        "from_node": "Group Input",
+        "from_socket": "Road texture strech",
+        "to_node": "Main Road",
+        "to_socket": "Value"
+      }
+    ]
+  }
+}

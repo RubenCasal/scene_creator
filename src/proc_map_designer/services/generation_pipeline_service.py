@@ -83,7 +83,8 @@ class GenerationPipelineService:
             export_manifest_path=str(manifest_path),
             result_path="",
             completed_at=utc_now_iso(),
-            used_layer_ids=[layer.layer_id for layer in project.layers if layer.generation_settings.enabled],
+            used_layer_ids=[layer.layer_id for layer in project.layers if layer.generation_settings.enabled]
+            + [road.road_id for road in project.roads if road.generator.enabled and road.visible],
             validation_warnings=list(report.warnings),
         )
 

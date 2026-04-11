@@ -15,7 +15,7 @@ from proc_map_designer.domain.validators import (
     require_string,
 )
 
-PROJECT_SCHEMA_VERSION = 1
+PROJECT_SCHEMA_VERSION = 2
 
 
 def utc_now_iso() -> str:
@@ -277,6 +277,157 @@ class LayerState:
 
 
 @dataclass(slots=True)
+class RoadPoint:
+    x: float
+    y: float
+
+    def __post_init__(self) -> None:
+        self.x = require_float(self.x, "roads[].points[].x")
+        self.y = require_float(self.y, "roads[].points[].y")
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "RoadPoint":
+        mapping = require_mapping(data, "roads[].points[]")
+        return cls(
+            x=mapping.get("x", 0.0),
+            y=mapping.get("y", 0.0),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "x": self.x,
+            "y": self.y,
+        }
+
+
+@dataclass(slots=True)
+class RoadStyleSettings:
+    width: float = 6.0
+    resolution: int = 24
+    profile: str = "single"
+
+    def __post_init__(self) -> None:
+        self.width = require_float(self.width, "roads[].style.width", min_value=0.01)
+        self.resolution = require_int(self.resolution, "roads[].style.resolution", min_value=1, max_value=4096)
+        self.profile = require_string(self.profile, "roads[].style.profile")
+        if self.profile not in {"single", "double"}:
+            raise ValueError("roads[].style.profile debe ser 'single' o 'double'.")
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "RoadStyleSettings":
+        mapping = require_mapping(data, "roads[].style")
+        return cls(
+            width=mapping.get("width", 6.0),
+            resolution=mapping.get("resolution", 24),
+            profile=mapping.get("profile", "single"),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "width": self.width,
+            "resolution": self.resolution,
+            "profile": self.profile,
+        }
+
+
+@dataclass(slots=True)
+class RoadGeneratorSettings:
+    enabled: bool = True
+    seed: int | None = None
+    geometry_nodes_asset_path: str = "geometry_nodes_procedural_road.json"
+    material_library_blend_path: str = "blender_defaults/road.blend"
+
+    def __post_init__(self) -> None:
+        self.enabled = require_bool(self.enabled, "roads[].generator.enabled")
+        if self.seed is None:
+            seed = None
+        else:
+            seed = require_int(self.seed, "roads[].generator.seed")
+        self.seed = seed
+        self.geometry_nodes_asset_path = require_string(
+            self.geometry_nodes_asset_path,
+            "roads[].generator.geometry_nodes_asset_path",
+        )
+        self.material_library_blend_path = require_string(
+            self.material_library_blend_path,
+            "roads[].generator.material_library_blend_path",
+        )
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "RoadGeneratorSettings":
+        mapping = require_mapping(data, "roads[].generator")
+        return cls(
+            enabled=mapping.get("enabled", True),
+            seed=mapping.get("seed"),
+            geometry_nodes_asset_path=mapping.get(
+                "geometry_nodes_asset_path",
+                "geometry_nodes_procedural_road.json",
+            ),
+            material_library_blend_path=mapping.get(
+                "material_library_blend_path",
+                "blender_defaults/road.blend",
+            ),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "enabled": self.enabled,
+            "seed": self.seed,
+            "geometry_nodes_asset_path": self.geometry_nodes_asset_path,
+            "material_library_blend_path": self.material_library_blend_path,
+        }
+
+
+@dataclass(slots=True)
+class RoadState:
+    road_id: str
+    name: str
+    visible: bool = True
+    closed: bool = False
+    points: list[RoadPoint] = field(default_factory=list)
+    style: RoadStyleSettings = field(default_factory=RoadStyleSettings)
+    generator: RoadGeneratorSettings = field(default_factory=RoadGeneratorSettings)
+
+    def __post_init__(self) -> None:
+        self.road_id = require_string(self.road_id, "roads[].road_id")
+        self.name = require_string(self.name, "roads[].name", allow_empty=True) or self.road_id
+        self.visible = require_bool(self.visible, "roads[].visible")
+        self.closed = require_bool(self.closed, "roads[].closed")
+        self.points = [
+            point if isinstance(point, RoadPoint) else RoadPoint.from_dict(require_mapping(point, "roads[].points[]"))
+            for point in require_list(self.points, "roads[].points")
+        ]
+        if len(self.points) < 2:
+            raise ValueError("Cada road debe tener al menos 2 puntos.")
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "RoadState":
+        mapping = require_mapping(data, "roads[]")
+        raw_style = mapping.get("style", {})
+        raw_generator = mapping.get("generator", {})
+        return cls(
+            road_id=require_string(mapping.get("road_id"), "roads[].road_id"),
+            name=require_string(mapping.get("name", ""), "roads[].name", allow_empty=True),
+            visible=require_bool(mapping.get("visible", True), "roads[].visible"),
+            closed=require_bool(mapping.get("closed", False), "roads[].closed"),
+            points=[RoadPoint.from_dict(require_mapping(item, "roads[].points[]")) for item in require_list(mapping.get("points", []), "roads[].points")],
+            style=RoadStyleSettings.from_dict(require_mapping(raw_style, "roads[].style")),
+            generator=RoadGeneratorSettings.from_dict(require_mapping(raw_generator, "roads[].generator")),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "road_id": self.road_id,
+            "name": self.name,
+            "visible": self.visible,
+            "closed": self.closed,
+            "points": [point.to_dict() for point in self.points],
+            "style": self.style.to_dict(),
+            "generator": self.generator.to_dict(),
+        }
+
+
+@dataclass(slots=True)
 class GenerationSettings:
     seed: int | None = None
     randomize_seed: bool = True
@@ -387,6 +538,7 @@ class ProjectState:
     collection_tree: list[CollectionNode] = field(default_factory=list)
     map_settings: MapSettings = field(default_factory=MapSettings)
     layers: list[LayerState] = field(default_factory=list)
+    roads: list[RoadState] = field(default_factory=list)
     generation_settings: GenerationSettings = field(default_factory=GenerationSettings)
     latest_output: LatestOutputInfo | None = None
 
@@ -411,6 +563,7 @@ class ProjectState:
             collection_tree=[],
             map_settings=MapSettings(),
             layers=[],
+            roads=[],
             generation_settings=GenerationSettings(),
             latest_output=None,
         )
@@ -420,7 +573,7 @@ class ProjectState:
         mapping = require_mapping(data, "project_state")
 
         schema_version = require_int(mapping.get("schema_version"), "schema_version", min_value=1)
-        if schema_version != PROJECT_SCHEMA_VERSION:
+        if schema_version not in {1, PROJECT_SCHEMA_VERSION}:
             raise ValueError(
                 f"schema_version={schema_version} no soportada. Esperada: {PROJECT_SCHEMA_VERSION}."
             )
@@ -432,6 +585,9 @@ class ProjectState:
 
         raw_layers = require_list(mapping.get("layers", []), "layers")
         layers = [LayerState.from_dict(require_mapping(item, "layers[]")) for item in raw_layers]
+
+        raw_roads = require_list(mapping.get("roads", []), "roads")
+        roads = [RoadState.from_dict(require_mapping(item, "roads[]")) for item in raw_roads]
 
         raw_map_settings = mapping.get("map_settings", {})
         map_settings = MapSettings.from_dict(require_mapping(raw_map_settings, "map_settings"))
@@ -471,6 +627,7 @@ class ProjectState:
             collection_tree=collection_tree,
             map_settings=map_settings,
             layers=layers,
+            roads=roads,
             generation_settings=generation_settings,
             latest_output=latest_output,
         )
@@ -491,6 +648,7 @@ class ProjectState:
             "collection_tree": [node.to_dict() for node in self.collection_tree],
             "map_settings": self.map_settings.to_dict(),
             "layers": [layer.to_dict() for layer in self.layers],
+            "roads": [road.to_dict() for road in self.roads],
             "generation_settings": self.generation_settings.to_dict(),
             "latest_output": self.latest_output.to_dict() if self.latest_output else None,
         }

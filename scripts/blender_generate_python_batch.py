@@ -15,6 +15,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from blender_collection_utils import find_collection_by_path
+from blender_road_utils import ensure_roads_generated
 from blender_script_utils import bootstrap_src_path, emit_json
 
 bootstrap_src_path()
@@ -138,6 +139,24 @@ def hide_original_scene_content(visible_root_names: set[str]) -> None:
             continue
         obj.hide_viewport = True
         obj.hide_render = True
+
+
+def configure_material_viewport() -> None:
+    for window in bpy.context.window_manager.windows:
+        screen = window.screen
+        if screen is None:
+            continue
+        for area in screen.areas:
+            if area.type != 'VIEW_3D':
+                continue
+            for space in area.spaces:
+                if space.type != 'VIEW_3D':
+                    continue
+                try:
+                    space.shading.type = 'MATERIAL'
+                    space.shading.color_type = 'MATERIAL'
+                except Exception:
+                    continue
 
 
 def collection_ground_offset(collection: bpy.types.Collection) -> float:
@@ -287,25 +306,28 @@ def main(argv: list[str]) -> None:
         bpy.context.scene.collection.objects.unlink(runtime_plane)
     print(f"[python_batch] Plano runtime creado: {runtime_plane.name} ({package.map.width} x {package.map.height})")
     hide_original_scene_content({root_collection.name})
+    configure_material_viewport()
 
     summary = generate_instances(plans, layer_lookup, asset_collections, runtime_plane, root_collection)
-    for entry in summary:
+    road_summary = ensure_roads_generated(package, root_collection, base_plane)
+    combined_summary = summary + road_summary
+    for entry in combined_summary:
         print(f"[python_batch] {entry['layer_id']}: {entry['count']} instancias")
 
     bpy.ops.wm.save_as_mainfile(filepath=str(output_path))
     print(f"[python_batch] Archivo guardado: {output_path}")
 
     warnings = [
-        f"La capa '{entry['layer_id']}' no generó instancias." for entry in summary if entry["count"] == 0
+        f"La capa '{entry['layer_id']}' no generó instancias." for entry in combined_summary if entry["count"] == 0
     ]
-    if not summary:
+    if not combined_summary:
         warnings.append("No se generó ninguna instancia. Verifica que existan capas habilitadas y máscaras con información.")
 
     payload = {
         "success": True,
         "backend": BACKEND_NAME,
         "output_blend": str(output_path),
-        "placed_layers": summary,
+        "placed_layers": combined_summary,
         "warnings": warnings,
     }
     emit_json(payload)

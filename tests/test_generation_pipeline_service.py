@@ -25,6 +25,18 @@ class _FakeRunner:
     def open_blend_interactive(self, blend_file: Path) -> None:
         self.last_opened = blend_file
 
+    def run_script_with_blend(self, blend_file: Path, script_path: Path, script_args: list[str], log_callback=None):
+        del blend_file, script_path, script_args
+        if log_callback is not None:
+            log_callback("fake blender run")
+        return {
+            "success": True,
+            "backend": "python_batch",
+            "output_blend": "/tmp/out.blend",
+            "warnings": [],
+            "placed_layers": [{"layer_id": "road/001", "count": 1}],
+        }
+
 
 class _FakeValidationService:
     def validate_package(self, project_json_path: Path, log=None) -> ValidationReport:
@@ -191,6 +203,65 @@ class GenerationPipelineServiceTests(unittest.TestCase):
 
             with self.assertRaises(GenerationServiceError):
                 service.generate(project_json, "python_batch", None)
+
+    def test_generation_service_allows_road_only_package(self) -> None:
+        service = GenerationService(
+            runner=_FakeRunner(),
+            python_batch_script=Path("/tmp/python_batch.py"),
+            geometry_nodes_script=Path("/tmp/gn.py"),
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            package_dir = Path(temp_dir)
+            source_blend = package_dir / "source.blend"
+            source_blend.write_bytes(b"blend")
+            asset_dir = package_dir / "assets" / "roads"
+            asset_dir.mkdir(parents=True)
+            (asset_dir / "geometry_nodes_procedural_road.json").write_text(
+                '{"object": "Procedural Road", "root_tree": {"tree_name": "Road", "nodes": [], "links": []}}',
+                encoding="utf-8",
+            )
+            material_blend = package_dir / "road.blend"
+            material_blend.write_bytes(b"blend")
+            project_json = package_dir / "project.json"
+            project_json.write_text(
+                (
+                    "{"
+                    '\n  "schema_version": 2,'
+                    '\n  "project_id": "proj",'
+                    f'\n  "source_blend": "{source_blend.as_posix()}",'
+                    '\n  "blender_executable": "/usr/bin/blender",'
+                    f'\n  "output_blend": "{(package_dir / "out.blend").as_posix()}",'
+                    '\n  "map": {'
+                    '\n    "width": 10.0,'
+                    '\n    "height": 10.0,'
+                    '\n    "unit": "m",'
+                    '\n    "mask_resolution": {"width": 1, "height": 1},'
+                    '\n    "base_plane_object": "Plane"'
+                    '\n  },'
+                    '\n  "layers": [],'
+                    '\n  "roads": ['
+                    '\n    {'
+                    '\n      "road_id": "road/001",'
+                    '\n      "name": "Road 1",'
+                    '\n      "visible": true,'
+                    '\n      "closed": false,'
+                    '\n      "points": [{"x": 0.0, "y": 0.0}, {"x": 1.0, "y": 1.0}],'
+                    '\n      "style": {"width": 6.0, "resolution": 24},'
+                    '\n      "generator": {'
+                    '\n        "seed": 1,'
+                    '\n        "geometry_nodes_asset_path": "assets/roads/geometry_nodes_procedural_road.json",'
+                    f'\n        "material_library_blend_path": "{material_blend.as_posix()}"'
+                    '\n      }'
+                    '\n    }'
+                    '\n  ]'
+                    '\n}'
+                ),
+                encoding="utf-8",
+            )
+
+            result = service.generate(project_json, "python_batch", None)
+            self.assertTrue(result.success)
 
 
 if __name__ == "__main__":
