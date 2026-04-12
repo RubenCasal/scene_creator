@@ -13,7 +13,7 @@ ROAD_IMAGE_NAMES = ("RoadBaseColor.jpg", "RoadRoughness.jpg")
 ROAD_SHADER_NODE_GROUP_NAMES = ("NodeGroup.003", "NodeGroup.004", "NodeGroup.005")
 ROAD_GEOMETRY_NODE_GROUP_NAME = "Procedural Road"
 ROAD_TEMPLATE_OBJECT_NAME = "Procedural Road"
-ROAD_SURFACE_Z_OFFSET = -0.02
+ROAD_SURFACE_Z_OFFSET = 0.385
 ROAD_TEMPLATE_OBJECT_TAG_KEY = "pm_road_template_object"
 ROAD_MATERIAL_TAG_KEY = "pm_road_material_role"
 ROAD_MATERIAL_SOURCE_KEY = "pm_road_material_source"
@@ -43,7 +43,7 @@ def load_road_geometry_spec(asset_path: Path) -> dict[str, Any]:
 def ensure_roads_generated(
     package,
     root_collection: bpy.types.Collection,
-    base_plane: bpy.types.Object,
+    runtime_plane: bpy.types.Object,
 ) -> list[dict[str, Any]]:
     visible_roads = [road for road in package.roads if road.visible]
     if not visible_roads:
@@ -53,7 +53,7 @@ def ensure_roads_generated(
     root_collection.children.link(roads_collection)
     summary: list[dict[str, Any]] = []
     for index, road in enumerate(visible_roads, start=1):
-        road_object = create_road_curve_object(road, base_plane, index)
+        road_object = create_road_curve_object(road, runtime_plane, index)
         roads_collection.objects.link(road_object)
         summary.append({"layer_id": road.road_id, "count": max(0, len(road.points) - 1)})
     _cleanup_road_template_artifacts()
@@ -126,7 +126,7 @@ def append_road_materials_from_blend(blend_path: Path) -> dict[str, bpy.types.Ma
     return material_map
 
 
-def create_road_curve_object(road, base_plane: bpy.types.Object, index: int) -> bpy.types.Object:
+def create_road_curve_object(road, runtime_plane: bpy.types.Object, index: int) -> bpy.types.Object:
     template_object = _append_or_reuse_road_template_object(road.generator.material_library_blend_path)
     if template_object is None:
         curve = bpy.data.curves.new(name=f"PM_RoadCurve_{index:03d}", type='CURVE')
@@ -145,9 +145,9 @@ def create_road_curve_object(road, base_plane: bpy.types.Object, index: int) -> 
 
     _replace_curve_with_bezier_path(obj.data, road.points, road.closed)
     _configure_road_modifier(modifier, road)
-    base_location = base_plane.matrix_world.translation.copy()
-    base_location.z += ROAD_SURFACE_Z_OFFSET
-    obj.location = tuple(base_location)
+    runtime_location = runtime_plane.matrix_world.translation.copy()
+    runtime_location.z += ROAD_SURFACE_Z_OFFSET
+    obj.location = tuple(runtime_location)
     obj.rotation_mode = 'XYZ'
     obj.rotation_euler = (0.0, 0.0, 0.0)
     obj["pm_layer_id"] = road.road_id

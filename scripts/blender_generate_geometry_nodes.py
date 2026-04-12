@@ -221,7 +221,7 @@ def main(argv: list[str]) -> None:
     hide_original_scene_content({root_collection.name})
     configure_material_viewport()
     summary = generate_emitters(runtime_plane, root_collection, plans, layer_lookup, assets)
-    road_summary = ensure_roads_generated(package, root_collection, base_plane)
+    road_summary = ensure_roads_generated(package, root_collection, runtime_plane)
     combined_summary = summary + road_summary
     for entry in combined_summary:
         print(f"[geometry_nodes] {entry['layer_id']}: {entry['count']} puntos emisores")

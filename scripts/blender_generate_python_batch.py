@@ -309,7 +309,7 @@ def main(argv: list[str]) -> None:
     configure_material_viewport()
 
     summary = generate_instances(plans, layer_lookup, asset_collections, runtime_plane, root_collection)
-    road_summary = ensure_roads_generated(package, root_collection, base_plane)
+    road_summary = ensure_roads_generated(package, root_collection, runtime_plane)
     combined_summary = summary + road_summary
     for entry in combined_summary:
         print(f"[python_batch] {entry['layer_id']}: {entry['count']} instancias")
