@@ -18,6 +18,8 @@ from blender_script_utils import bootstrap_src_path, emit_json
 
 bootstrap_src_path()
 
+from blender_terrain_material_utils import validate_terrain_material_id
+
 from proc_map_designer.blender_bridge.package_loader import load_export_package
 
 
@@ -65,9 +67,15 @@ def validate_package(package_path: Path) -> dict[str, Any]:
     warnings: list[str] = []
     resolved_layers: list[dict[str, Any]] = []
 
-    resolved_base_plane, base_plane_error = resolve_base_plane(package.map.base_plane_object)
-    if base_plane_error:
-        errors.append(base_plane_error)
+    resolved_base_plane: dict[str, Any] | None = None
+    if package.map.base_plane_object:
+        resolved_base_plane, base_plane_error = resolve_base_plane(package.map.base_plane_object)
+        if base_plane_error:
+            warnings.append(base_plane_error)
+    try:
+        validate_terrain_material_id(package.map.terrain_material_id)
+    except ValueError as exc:
+        errors.append(str(exc))
 
     for layer in package.layers:
         layer_info: dict[str, Any] = {

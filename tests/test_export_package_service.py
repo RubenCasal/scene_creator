@@ -33,6 +33,7 @@ class ExportPackageServiceTests(unittest.TestCase):
             output_blend="/tmp/output.blend",
         )
         project.map_settings.base_plane_object = "BasePlane"
+        project.map_settings.terrain_material_id = "terrain_dirt"
         project.generation_settings.seed = 77
         project.layers = [
             LayerState(
@@ -77,6 +78,7 @@ class ExportPackageServiceTests(unittest.TestCase):
             self.assertEqual(payload["blender_executable"], "/usr/bin/blender")
             self.assertEqual(payload["output_blend"], "/tmp/output.blend")
             self.assertEqual(payload["map"]["base_plane_object"], "BasePlane")
+            self.assertEqual(payload["map"]["terrain_material_id"], "terrain_dirt")
             self.assertEqual(payload["map"]["mask_resolution"]["width"], project.map_settings.mask_width)
             self.assertEqual(payload["map"]["mask_resolution"]["height"], project.map_settings.mask_height)
 
@@ -129,7 +131,7 @@ class ExportPackageServiceTests(unittest.TestCase):
             self.assertTrue(copied_asset.exists())
             self.assertEqual(payload["roads"][0]["generator"]["material_library_blend_path"], str(material_blend.resolve()))
 
-    def test_export_fails_when_required_base_plane_is_missing(self) -> None:
+    def test_export_allows_missing_base_plane_for_generated_terrain(self) -> None:
         service = ExportPackageService()
         project = ProjectState.create_new(
             source_blend="/tmp/source.blend",
@@ -138,8 +140,9 @@ class ExportPackageServiceTests(unittest.TestCase):
         )
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            with self.assertRaises(ExportPackageError):
-                service.export_package(project, Path(temp_dir), lambda _root, _layer_ids: {})
+            manifest_path = service.export_package(project, Path(temp_dir), lambda _root, _layer_ids: {})
+            payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+            self.assertEqual(payload["map"]["base_plane_object"], "")
 
     def test_export_fails_when_layer_mask_is_not_exported(self) -> None:
         service = ExportPackageService()

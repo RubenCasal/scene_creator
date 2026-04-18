@@ -44,6 +44,11 @@ from proc_map_designer.services.generation_pipeline_service import (
 )
 from proc_map_designer.services.inspection_service import BlendInspectionError, BlendInspectionService
 from proc_map_designer.services.project_service import ProjectService, ProjectServiceError
+from proc_map_designer.services.terrain_material_catalog import (
+    TerrainMaterialCatalog,
+    TerrainMaterialCatalogError,
+    load_terrain_material_catalog,
+)
 from proc_map_designer.ui.canvas.brush_tool import BrushTool
 from proc_map_designer.ui.canvas.canvas_view import CanvasView
 from proc_map_designer.ui.canvas.layer_mask_manager import LayerMaskManager
@@ -211,6 +216,7 @@ class MainWindow(QMainWindow):
         self._brush_tool = BrushTool(radius_px=24, intensity=0.75, mode="paint")
         self._layer_manager = LayerMaskManager(self._project_state.map_settings)
         self._road_manager = RoadManager(self._project_state.map_settings)
+        self._terrain_material_catalog: TerrainMaterialCatalog | None = None
         self._active_layer_id: str | None = None
         self._editing_target = "layer"
         self._raster_mode = "paint"
@@ -223,6 +229,7 @@ class MainWindow(QMainWindow):
         self._build_actions()
         self._build_menu_and_toolbar()
         self._build_ui()
+        self._load_terrain_material_catalog()
         self._populate_backend_choices()
         self._wire_canvas()
         self._apply_project_to_ui()
@@ -391,10 +398,9 @@ class MainWindow(QMainWindow):
         self.setup_mask_height_spin.editingFinished.connect(self._on_setup_map_changed)
         form_layout.addRow("Mask height", self.setup_mask_height_spin)
 
-        self.base_plane_edit = QLineEdit()
-        self.base_plane_edit.setPlaceholderText("Nombre del objeto plano base")
-        self.base_plane_edit.editingFinished.connect(self._on_base_plane_changed)
-        form_layout.addRow("Plano base", self.base_plane_edit)
+        self.terrain_material_combo = QComboBox()
+        self.terrain_material_combo.currentIndexChanged.connect(self._on_terrain_material_changed)
+        form_layout.addRow("Terrain texture", self.terrain_material_combo)
 
         self.output_path_edit = QLineEdit()
         self.output_path_edit.setPlaceholderText("Ruta de salida/resultados")
@@ -1105,8 +1111,11 @@ class MainWindow(QMainWindow):
             return str(candidate.resolve())
         return str(candidate.with_suffix(".blend").resolve())
 
-    def _on_base_plane_changed(self) -> None:
-        self._project_state.map_settings.base_plane_object = self.base_plane_edit.text().strip()
+    def _on_terrain_material_changed(self, _index: int) -> None:
+        material_id = self.terrain_material_combo.currentData()
+        if not isinstance(material_id, str) or not material_id:
+            return
+        self._project_state.map_settings.terrain_material_id = material_id
         self._project_state.touch()
         self._refresh_map_summary_label()
 
@@ -1273,7 +1282,6 @@ class MainWindow(QMainWindow):
         if not self._project_state.map_settings.base_plane_object and result.base_plane_candidates:
             suggested_plane = result.base_plane_candidates[0]
             self._project_state.map_settings.base_plane_object = suggested_plane
-            self.base_plane_edit.setText(suggested_plane)
             self._refresh_map_summary_label()
             self._append_log(f"Plano base sugerido: {suggested_plane}")
 
@@ -1339,7 +1347,6 @@ class MainWindow(QMainWindow):
         self._pipeline_state.is_busy = is_busy
         self._pipeline_state.current_stage = stage
         self.backend_combo.setEnabled(not is_busy)
-        self.base_plane_edit.setEnabled(not is_busy)
         self.output_path_edit.setEnabled(not is_busy)
         self.browse_output_button.setEnabled(not is_busy)
         self.action_validate_pipeline.setEnabled(not is_busy)
@@ -1390,7 +1397,7 @@ class MainWindow(QMainWindow):
             "Mapa: "
             f"{settings.logical_width:.2f} x {settings.logical_height:.2f} {settings.logical_unit} | "
             f"máscaras {settings.mask_width}x{settings.mask_height} | "
-            f"plano base: {settings.base_plane_object or '-'}"
+            f"terrain: {settings.terrain_material_id}"
         )
 
     def _refresh_pipeline_state_label(self) -> None:
@@ -1702,7 +1709,6 @@ class MainWindow(QMainWindow):
         self._project_state.source_blend = str(self._current_blend) if self._current_blend else ""
         self._project_state.blender_executable = self._settings.get_blender_executable() or ""
         self._project_state.output_blend = self.output_path_edit.text().strip()
-        self._project_state.map_settings.base_plane_object = self.base_plane_edit.text().strip()
         self._project_state.roads = self._road_manager.snapshot_road_states()
         if self._project_file_path and not self._project_state.project_name.strip():
             self._project_state.project_name = self._project_file_path.stem
@@ -1732,7 +1738,9 @@ class MainWindow(QMainWindow):
         self.setup_map_height_spin.setValue(self._project_state.map_settings.logical_height)
         self.setup_mask_width_spin.setValue(self._project_state.map_settings.mask_width)
         self.setup_mask_height_spin.setValue(self._project_state.map_settings.mask_height)
-        self.base_plane_edit.setText(self._project_state.map_settings.base_plane_object)
+        terrain_index = self.terrain_material_combo.findData(self._project_state.map_settings.terrain_material_id)
+        if terrain_index >= 0:
+            self.terrain_material_combo.setCurrentIndex(terrain_index)
         self.output_path_edit.setText(self._project_state.output_blend)
         if self._project_state.latest_output and self._project_state.latest_output.backend_id:
             index = self.backend_combo.findData(self._project_state.latest_output.backend_id)
@@ -1747,6 +1755,22 @@ class MainWindow(QMainWindow):
         self._set_workflow_step(0)
         project_title = self._project_state.project_name or "Proyecto"
         self.setWindowTitle(f"Procedural Map Designer - {project_title}")
+
+    def _load_terrain_material_catalog(self) -> None:
+        self.terrain_material_combo.blockSignals(True)
+        self.terrain_material_combo.clear()
+        try:
+            self._terrain_material_catalog = load_terrain_material_catalog()
+        except TerrainMaterialCatalogError as exc:
+            self._terrain_material_catalog = None
+            self.terrain_material_combo.addItem("Catalog unavailable", "")
+            self.terrain_material_combo.setEnabled(False)
+            self._append_log(f"WARNING terrain materials: {exc}")
+        else:
+            for entry in self._terrain_material_catalog.entries:
+                self.terrain_material_combo.addItem(entry.label, entry.id)
+            self.terrain_material_combo.setEnabled(True)
+        self.terrain_material_combo.blockSignals(False)
 
     @Slot(str)
     def _append_log(self, message: str) -> None:

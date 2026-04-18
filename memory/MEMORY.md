@@ -1,0 +1,2 @@
+- [AI orchestration layer](project_ai_orchestration.md) — Four-agent OpenAI pipeline (Planner/BlenderCoder/GNSpecialist/Critic) added April 2026
+- [Agent orchestration config preferences](feedback_agent_orchestration.md) — How to configure OpenCode agents for this project (models, reasoning effort, domain prompts)

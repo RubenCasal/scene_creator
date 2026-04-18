@@ -69,8 +69,6 @@ class ExportPackageService:
             missing.append("blender_executable")
         if not project.output_blend.strip():
             missing.append("output_blend")
-        if not project.map_settings.base_plane_object.strip():
-            missing.append("map_settings.base_plane_object")
 
         if missing:
             fields = ", ".join(missing)
@@ -91,6 +89,7 @@ class ExportPackageService:
                 "height": project.map_settings.mask_height,
             },
             base_plane_object=project.map_settings.base_plane_object,
+            terrain_material_id=project.map_settings.terrain_material_id,
         )
 
         layers_payload: list[ExportLayer] = []

@@ -120,6 +120,7 @@ class ExportMap:
     unit: str
     mask_resolution: dict[str, int]
     base_plane_object: str
+    terrain_material_id: str
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -131,6 +132,7 @@ class ExportMap:
                 "height": self.mask_resolution["height"],
             },
             "base_plane_object": self.base_plane_object,
+            "terrain_material_id": self.terrain_material_id,
         }
 
 

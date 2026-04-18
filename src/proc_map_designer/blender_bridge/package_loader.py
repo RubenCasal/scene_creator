@@ -83,6 +83,7 @@ class ExportMapInfo:
     mask_width: int
     mask_height: int
     base_plane_object: str
+    terrain_material_id: str
 
 
 @dataclass(slots=True)
@@ -132,8 +133,13 @@ def load_export_package(project_json_path: Path, *, require_mask_files: bool = F
         mask_width=require_int(mask_resolution_payload.get("width"), "map.mask_resolution.width", min_value=1),
         mask_height=require_int(mask_resolution_payload.get("height"), "map.mask_resolution.height", min_value=1),
         base_plane_object=require_string(
-            map_payload.get("base_plane_object"),
+            map_payload.get("base_plane_object", ""),
             "map.base_plane_object",
+            allow_empty=True,
+        ),
+        terrain_material_id=require_string(
+            map_payload.get("terrain_material_id", "terrain_grass"),
+            "map.terrain_material_id",
         ),
     )
 

@@ -34,6 +34,7 @@ class PackageLoaderTests(unittest.TestCase):
                     "height": 200.0,
                     "unit": "m",
                     "base_plane_object": "BasePlane",
+                    "terrain_material_id": "terrain_grass",
                     "mask_resolution": {"width": 4, "height": 4},
                 },
                 "layers": [
@@ -64,6 +65,7 @@ class PackageLoaderTests(unittest.TestCase):
 
             self.assertEqual(package.project_id, "proj-123")
             self.assertEqual(package.map.base_plane_object, "BasePlane")
+            self.assertEqual(package.map.terrain_material_id, "terrain_grass")
             self.assertEqual(len(package.layers), 1)
             layer = package.layers[0]
             self.assertTrue(layer.mask_exists)
@@ -84,6 +86,7 @@ class PackageLoaderTests(unittest.TestCase):
                     "height": 50.0,
                     "unit": "m",
                     "base_plane_object": "Plane",
+                    "terrain_material_id": "terrain_dirt",
                     "mask_resolution": {"width": 8, "height": 8},
                 },
                 "layers": [
@@ -133,6 +136,7 @@ class PackageLoaderTests(unittest.TestCase):
                     "height": 50.0,
                     "unit": "m",
                     "base_plane_object": "Plane",
+                    "terrain_material_id": "terrain_dirt",
                     "mask_resolution": {"width": 8, "height": 8},
                 },
                 "layers": [
@@ -181,6 +185,7 @@ class PackageLoaderTests(unittest.TestCase):
                     "height": 100.0,
                     "unit": "m",
                     "base_plane_object": "BasePlane",
+                    "terrain_material_id": "terrain_grass",
                     "mask_resolution": {"width": 4, "height": 4},
                 },
                 "layers": [],

@@ -39,6 +39,7 @@ class MapSettings:
     mask_width: int = 1024
     mask_height: int = 1024
     base_plane_object: str = ""
+    terrain_material_id: str = "terrain_grass"
 
     def __post_init__(self) -> None:
         self.logical_width = require_float(
@@ -71,6 +72,11 @@ class MapSettings:
             "map_settings.base_plane_object",
             allow_empty=True,
         )
+        self.terrain_material_id = require_string(
+            self.terrain_material_id,
+            "map_settings.terrain_material_id",
+            allow_empty=False,
+        )
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> "MapSettings":
@@ -82,6 +88,7 @@ class MapSettings:
             mask_width=mapping.get("mask_width", 1024),
             mask_height=mapping.get("mask_height", 1024),
             base_plane_object=mapping.get("base_plane_object", ""),
+            terrain_material_id=mapping.get("terrain_material_id", "terrain_grass"),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -92,6 +99,7 @@ class MapSettings:
             "mask_width": self.mask_width,
             "mask_height": self.mask_height,
             "base_plane_object": self.base_plane_object,
+            "terrain_material_id": self.terrain_material_id,
         }
 
 

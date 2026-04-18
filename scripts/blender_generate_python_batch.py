@@ -20,6 +20,8 @@ from blender_script_utils import bootstrap_src_path, emit_json
 
 bootstrap_src_path()
 
+from blender_terrain_material_utils import prepare_runtime_plane_as_terrain
+
 from proc_map_designer.blender_bridge import (
     LayerPlanInput,
     LayerPlacementPlan,
@@ -280,10 +282,8 @@ def main(argv: list[str]) -> None:
     if not output_path.parent.exists():
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    base_plane = bpy.data.objects.get(package.map.base_plane_object)
-    if base_plane is None:
-        raise RuntimeError(f"No se encontró el objeto base '{package.map.base_plane_object}' en la escena.")
-    print(f"[python_batch] Plano base resuelto: {base_plane.name}")
+    if package.map.base_plane_object:
+        print(f"[python_batch] Plano base configurado (no usado para terrain): {package.map.base_plane_object}")
 
     layer_inputs, layer_lookup = plan_layer_inputs(package.layers)
     asset_collections = resolve_asset_collections([layer for layer in package.layers if layer.enabled])
@@ -304,6 +304,10 @@ def main(argv: list[str]) -> None:
     root_collection.objects.link(runtime_plane)
     if bpy.context.scene.collection.objects.get(runtime_plane.name) is not None:
         bpy.context.scene.collection.objects.unlink(runtime_plane)
+    prepare_runtime_plane_as_terrain(
+        terrain_material_id=package.map.terrain_material_id,
+        runtime_plane=runtime_plane,
+    )
     print(f"[python_batch] Plano runtime creado: {runtime_plane.name} ({package.map.width} x {package.map.height})")
     hide_original_scene_content({root_collection.name})
     configure_material_viewport()

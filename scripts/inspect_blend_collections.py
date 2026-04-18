@@ -46,7 +46,10 @@ def main() -> None:
     base_plane_candidates = sorted(
         obj.name
         for obj in bpy.data.objects
-        if obj.type == "MESH" and obj.visible_get()
+        if obj.type == "MESH"
+        and obj.visible_get()
+        and hasattr(obj, "dimensions")
+        and max(float(obj.dimensions[0]), float(obj.dimensions[1])) >= 1.0
     )
     scene_root = bpy.context.scene.collection
     root_collections = list(scene_root.children)

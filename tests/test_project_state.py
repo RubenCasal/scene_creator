@@ -41,6 +41,7 @@ class ProjectStateTests(unittest.TestCase):
             mask_width=2048,
             mask_height=1024,
             base_plane_object="BasePlane",
+            terrain_material_id="terrain_dirt",
         )
 
         payload = state.to_dict()
@@ -54,6 +55,7 @@ class ProjectStateTests(unittest.TestCase):
         self.assertEqual(loaded.collection_tree[0].children[0].object_count, 3)
         self.assertEqual(loaded.map_settings.mask_width, 2048)
         self.assertEqual(loaded.map_settings.base_plane_object, "BasePlane")
+        self.assertEqual(loaded.map_settings.terrain_material_id, "terrain_dirt")
 
     def test_invalid_schema_version_fails(self) -> None:
         payload = ProjectState.create_new().to_dict()
@@ -118,6 +120,7 @@ class ProjectStateTests(unittest.TestCase):
 
         self.assertEqual(loaded.output_blend, "")
         self.assertEqual(loaded.map_settings.base_plane_object, "")
+        self.assertEqual(loaded.map_settings.terrain_material_id, "terrain_grass")
 
     def test_road_round_trip_serialization(self) -> None:
         state = ProjectState.create_new(project_name="Roads")
