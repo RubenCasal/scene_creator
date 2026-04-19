@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
-EXPORT_PACKAGE_SCHEMA_VERSION = 2
+EXPORT_PACKAGE_SCHEMA_VERSION = 3
 
 
 @dataclass(slots=True)
@@ -121,6 +121,7 @@ class ExportMap:
     mask_resolution: dict[str, int]
     base_plane_object: str
     terrain_material_id: str
+    terrain: "ExportTerrain"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -133,6 +134,37 @@ class ExportMap:
             },
             "base_plane_object": self.base_plane_object,
             "terrain_material_id": self.terrain_material_id,
+            "terrain": self.terrain.to_dict(),
+        }
+
+
+@dataclass(slots=True)
+class ExportTerrain:
+    enabled: bool
+    max_height: float
+    export_subdivision: int
+    heightfield_resolution: int
+    heightfield_path: str
+    noise_enabled: bool
+    noise_scale: float
+    noise_strength: float
+    noise_octaves: int
+    noise_roughness: float
+    noise_seed: int
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "enabled": self.enabled,
+            "max_height": self.max_height,
+            "export_subdivision": self.export_subdivision,
+            "heightfield_resolution": self.heightfield_resolution,
+            "heightfield_path": self.heightfield_path,
+            "noise_enabled": self.noise_enabled,
+            "noise_scale": self.noise_scale,
+            "noise_strength": self.noise_strength,
+            "noise_octaves": self.noise_octaves,
+            "noise_roughness": self.noise_roughness,
+            "noise_seed": self.noise_seed,
         }
 
 

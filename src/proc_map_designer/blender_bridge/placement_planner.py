@@ -7,6 +7,8 @@ import random
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Sequence
 
+from proc_map_designer.blender_bridge.terrain_sampler import TerrainSampler
+
 
 @dataclass(slots=True)
 class MapDimensions:
@@ -39,6 +41,8 @@ class Placement:
     rotation_z_deg: float
     scale: float
     weight: float
+    z: float = 0.0
+    normal: tuple[float, float, float] = (0.0, 1.0, 0.0)
 
 
 @dataclass(slots=True)
@@ -104,6 +108,7 @@ def plan_generation(
     project_id: str,
     map_dims: MapDimensions,
     layers: Sequence[LayerPlanInput],
+    terrain_sampler: TerrainSampler | None = None,
 ) -> list[LayerPlacementPlan]:
     if map_dims.mask_width <= 0 or map_dims.mask_height <= 0:
         raise ValueError("La resolución de máscara del mapa debe ser positiva.")
@@ -126,7 +131,7 @@ def plan_generation(
             )
 
         rng = random.Random(derive_layer_seed(project_id, layer.layer_id, layer.settings.seed))
-        placements = _plan_single_layer(layer, map_dims, rng, global_points)
+        placements = _plan_single_layer(layer, map_dims, rng, global_points, terrain_sampler)
         plan.placements.extend(placements)
         if not layer.settings.allow_overlap and placements:
             global_points.extend((placement.x, placement.y) for placement in placements)
@@ -139,6 +144,7 @@ def _plan_single_layer(
     map_dims: MapDimensions,
     rng: random.Random,
     global_points: list[tuple[float, float]],
+    terrain_sampler: TerrainSampler | None,
 ) -> list[Placement]:
     mask = layer.mask
     density = max(0.0, float(layer.settings.density))
@@ -172,6 +178,12 @@ def _plan_single_layer(
         offset_x = rng.uniform(-0.5, 0.5)
         offset_y = rng.uniform(-0.5, 0.5)
         scene_x, scene_y = mask_to_scene(x + offset_x, y + offset_y, map_dims)
+        terrain_z = 0.0
+        surface_normal = (0.0, 1.0, 0.0)
+        if terrain_sampler is not None:
+            terrain_z = terrain_sampler.sample_at(scene_x, scene_y)
+            if bool(getattr(layer.settings, "align_to_surface_normal", False)):
+                surface_normal = terrain_sampler.sample_normal_at(scene_x, scene_y)
         if min_distance_sq > 0.0:
             if not layer.settings.allow_overlap and _has_conflict(scene_x, scene_y, global_points, min_distance_sq):
                 continue
@@ -196,9 +208,11 @@ def _plan_single_layer(
             Placement(
                 x=scene_x,
                 y=scene_y,
+                z=terrain_z,
                 rotation_z_deg=rotation_deg,
                 scale=max(0.0, scale_value),
                 weight=intensity,
+                normal=surface_normal,
             )
         )
         local_index.add(scene_x, scene_y)

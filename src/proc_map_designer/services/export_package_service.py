@@ -11,6 +11,7 @@ from proc_map_designer.domain.export_package import (
     ExportLayerSettings,
     ExportMap,
     ExportProject,
+    ExportTerrain,
     ExportRoad,
     ExportRoadGenerator,
     ExportRoadPoint,
@@ -90,6 +91,7 @@ class ExportPackageService:
             },
             base_plane_object=project.map_settings.base_plane_object,
             terrain_material_id=project.map_settings.terrain_material_id,
+            terrain=self._build_export_terrain(project, package_dir),
         )
 
         layers_payload: list[ExportLayer] = []
@@ -221,6 +223,44 @@ class ExportPackageService:
             )
 
         return str(source_path)
+
+    def _build_export_terrain(self, project: ProjectState, package_dir: Path) -> ExportTerrain:
+        terrain = project.terrain_settings
+        resolved_heightfield_path = self._resolve_terrain_heightfield_path(terrain.heightfield_path, package_dir)
+        if terrain.enabled and not resolved_heightfield_path:
+            raise ExportPackageError("Terrain sculpt está habilitado pero no existe un heightfield PNG válido para exportar.")
+        enabled = bool(terrain.enabled and resolved_heightfield_path)
+        return ExportTerrain(
+            enabled=enabled,
+            max_height=terrain.max_height,
+            export_subdivision=terrain.export_subdivision,
+            heightfield_resolution=terrain.heightfield_resolution,
+            heightfield_path=resolved_heightfield_path,
+            noise_enabled=terrain.noise.enabled,
+            noise_scale=terrain.noise.scale,
+            noise_strength=terrain.noise.strength,
+            noise_octaves=terrain.noise.octaves,
+            noise_roughness=terrain.noise.roughness,
+            noise_seed=terrain.noise.seed,
+        )
+
+    def _resolve_terrain_heightfield_path(self, raw_path: str, package_dir: Path) -> str:
+        path_text = raw_path.strip()
+        if not path_text:
+            return ""
+        source_path = Path(path_text).expanduser()
+        if not source_path.is_absolute():
+            source_path = source_path.resolve()
+        if not source_path.exists() or not source_path.is_file():
+            return ""
+        target_dir = package_dir / "terrain"
+        target_dir.mkdir(parents=True, exist_ok=True)
+        target_path = target_dir / source_path.name
+        try:
+            shutil.copy2(source_path, target_path)
+        except OSError as exc:
+            raise ExportPackageError(f"No se pudo copiar el heightfield de terreno: {exc}") from exc
+        return target_path.relative_to(package_dir).as_posix()
 
     def _resolve_and_validate_mask_path(
         self,

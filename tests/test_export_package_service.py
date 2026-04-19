@@ -72,13 +72,14 @@ class ExportPackageServiceTests(unittest.TestCase):
             self.assertTrue(project_json_path.exists())
             payload = json.loads(project_json_path.read_text(encoding="utf-8"))
 
-            self.assertEqual(payload["schema_version"], 2)
+            self.assertEqual(payload["schema_version"], 3)
             self.assertEqual(payload["project_id"], project.project_id)
             self.assertEqual(payload["source_blend"], "/tmp/source.blend")
             self.assertEqual(payload["blender_executable"], "/usr/bin/blender")
             self.assertEqual(payload["output_blend"], "/tmp/output.blend")
             self.assertEqual(payload["map"]["base_plane_object"], "BasePlane")
             self.assertEqual(payload["map"]["terrain_material_id"], "terrain_dirt")
+            self.assertFalse(payload["map"]["terrain"]["enabled"])
             self.assertEqual(payload["map"]["mask_resolution"]["width"], project.map_settings.mask_width)
             self.assertEqual(payload["map"]["mask_resolution"]["height"], project.map_settings.mask_height)
 

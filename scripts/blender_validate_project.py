@@ -76,6 +76,8 @@ def validate_package(package_path: Path) -> dict[str, Any]:
         validate_terrain_material_id(package.map.terrain_material_id)
     except ValueError as exc:
         errors.append(str(exc))
+    if package.map.terrain.enabled and not package.map.terrain.heightfield_exists:
+        errors.append(f"No existe el heightfield de terreno exportado: {package.map.terrain.heightfield_path}")
 
     for layer in package.layers:
         layer_info: dict[str, Any] = {

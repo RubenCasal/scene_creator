@@ -6,6 +6,7 @@ from typing import Any, Mapping
 from uuid import uuid4
 
 from proc_map_designer.domain.models import CollectionNode
+from proc_map_designer.domain.terrain_state import TerrainSettings
 from proc_map_designer.domain.validators import (
     require_bool,
     require_float,
@@ -15,7 +16,7 @@ from proc_map_designer.domain.validators import (
     require_string,
 )
 
-PROJECT_SCHEMA_VERSION = 2
+PROJECT_SCHEMA_VERSION = 3
 
 
 def utc_now_iso() -> str:
@@ -545,6 +546,7 @@ class ProjectState:
     output_blend: str = ""
     collection_tree: list[CollectionNode] = field(default_factory=list)
     map_settings: MapSettings = field(default_factory=MapSettings)
+    terrain_settings: TerrainSettings = field(default_factory=TerrainSettings)
     layers: list[LayerState] = field(default_factory=list)
     roads: list[RoadState] = field(default_factory=list)
     generation_settings: GenerationSettings = field(default_factory=GenerationSettings)
@@ -570,6 +572,7 @@ class ProjectState:
             updated_at=now,
             collection_tree=[],
             map_settings=MapSettings(),
+            terrain_settings=TerrainSettings(),
             layers=[],
             roads=[],
             generation_settings=GenerationSettings(),
@@ -581,7 +584,7 @@ class ProjectState:
         mapping = require_mapping(data, "project_state")
 
         schema_version = require_int(mapping.get("schema_version"), "schema_version", min_value=1)
-        if schema_version not in {1, PROJECT_SCHEMA_VERSION}:
+        if schema_version not in {1, 2, PROJECT_SCHEMA_VERSION}:
             raise ValueError(
                 f"schema_version={schema_version} no soportada. Esperada: {PROJECT_SCHEMA_VERSION}."
             )
@@ -599,6 +602,9 @@ class ProjectState:
 
         raw_map_settings = mapping.get("map_settings", {})
         map_settings = MapSettings.from_dict(require_mapping(raw_map_settings, "map_settings"))
+
+        raw_terrain_settings = mapping.get("terrain_settings", {})
+        terrain_settings = TerrainSettings.from_dict(require_mapping(raw_terrain_settings, "terrain_settings"))
 
         raw_generation_settings = mapping.get("generation_settings", {})
         generation_settings = GenerationSettings.from_dict(
@@ -634,6 +640,7 @@ class ProjectState:
             updated_at=updated_at,
             collection_tree=collection_tree,
             map_settings=map_settings,
+            terrain_settings=terrain_settings,
             layers=layers,
             roads=roads,
             generation_settings=generation_settings,
@@ -655,6 +662,7 @@ class ProjectState:
             "updated_at": self.updated_at,
             "collection_tree": [node.to_dict() for node in self.collection_tree],
             "map_settings": self.map_settings.to_dict(),
+            "terrain_settings": self.terrain_settings.to_dict(),
             "layers": [layer.to_dict() for layer in self.layers],
             "roads": [road.to_dict() for road in self.roads],
             "generation_settings": self.generation_settings.to_dict(),

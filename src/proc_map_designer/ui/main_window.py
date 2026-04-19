@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
     QSplitter,
     QTableWidget,
     QTableWidgetItem,
+    QTabWidget,
     QToolBar,
     QTreeWidget,
     QTreeWidgetItem,
@@ -54,6 +55,13 @@ from proc_map_designer.ui.canvas.canvas_view import CanvasView
 from proc_map_designer.ui.canvas.layer_mask_manager import LayerMaskManager
 from proc_map_designer.ui.canvas.road_manager import RoadManager
 from proc_map_designer.ui.map_settings_dialog import MapSettingsDialog
+
+try:
+    from proc_map_designer.ui.terrain import TerrainTab
+    _TERRAIN_IMPORT_ERROR: Exception | None = None
+except Exception as exc:  # pragma: no cover - optional runtime dependency path
+    TerrainTab = None  # type: ignore[assignment]
+    _TERRAIN_IMPORT_ERROR = exc
 
 EXPECTED_ROOTS = {"vegetation", "building"}
 ROAD_TOOL_TREE_ID = "__road_tool__"
@@ -217,6 +225,7 @@ class MainWindow(QMainWindow):
         self._layer_manager = LayerMaskManager(self._project_state.map_settings)
         self._road_manager = RoadManager(self._project_state.map_settings)
         self._terrain_material_catalog: TerrainMaterialCatalog | None = None
+        self._terrain_available = TerrainTab is not None
         self._active_layer_id: str | None = None
         self._editing_target = "layer"
         self._raster_mode = "paint"
@@ -554,8 +563,20 @@ class MainWindow(QMainWindow):
 
         splitter.addWidget(left_panel)
 
+        self.paint_tab_widget = QTabWidget()
         self.canvas_view = CanvasView()
-        splitter.addWidget(self.canvas_view)
+        self.paint_tab_widget.addTab(self.canvas_view, "Masks")
+        self._terrain_tab = self._build_terrain_tab_placeholder()
+        if self._terrain_available and TerrainTab is not None:
+            self._terrain_tab = TerrainTab(
+                terrain_settings=self._project_state.terrain_settings,
+                map_width=self._project_state.map_settings.logical_width,
+                map_height=self._project_state.map_settings.logical_height,
+                project_dir=str(self._project_file_path.parent) if self._project_file_path else "",
+            )
+            self._terrain_tab.terrain_state_changed.connect(self._on_terrain_state_changed)
+        self.paint_tab_widget.addTab(self._terrain_tab, "Terrain")
+        splitter.addWidget(self.paint_tab_widget)
         left_panel.setMinimumWidth(320)
         splitter.setCollapsible(0, False)
         splitter.setStretchFactor(0, 1)
@@ -949,6 +970,7 @@ class MainWindow(QMainWindow):
         self._persist_project(project_path)
 
     def _persist_project(self, project_path: Path) -> None:
+        self._terrain_tab.set_project_dir(str(project_path.parent))
         self._sync_project_runtime_data()
         try:
             self._project_state.layers = self._layer_manager.to_layer_states(project_path.parent)
@@ -973,6 +995,11 @@ class MainWindow(QMainWindow):
         self._layer_manager.set_map_settings(self._project_state.map_settings)
         self._road_manager.set_map_settings(self._project_state.map_settings)
         self.canvas_view.set_map_settings(self._project_state.map_settings)
+        if self._terrain_available:
+            self._terrain_tab.set_map_dimensions(
+                self._project_state.map_settings.logical_width,
+                self._project_state.map_settings.logical_height,
+            )
         self.canvas_view.refresh_overlay()
         self._refresh_map_summary_label()
         self._append_log(
@@ -1709,6 +1736,9 @@ class MainWindow(QMainWindow):
         self._project_state.source_blend = str(self._current_blend) if self._current_blend else ""
         self._project_state.blender_executable = self._settings.get_blender_executable() or ""
         self._project_state.output_blend = self.output_path_edit.text().strip()
+        if self._terrain_available:
+            self._terrain_tab.save_heightfield()
+            self._project_state.terrain_settings = self._terrain_tab.terrain_service.settings
         self._project_state.roads = self._road_manager.snapshot_road_states()
         if self._project_file_path and not self._project_state.project_name.strip():
             self._project_state.project_name = self._project_file_path.stem
@@ -1716,6 +1746,13 @@ class MainWindow(QMainWindow):
     def _rebuild_layer_manager(self, project_dir: Path | None) -> None:
         self._layer_manager = LayerMaskManager(self._project_state.map_settings)
         self._road_manager = RoadManager(self._project_state.map_settings)
+        if self._terrain_available:
+            self._terrain_tab.set_project_dir(str(project_dir) if project_dir else "")
+            self._terrain_tab.set_map_dimensions(
+                self._project_state.map_settings.logical_width,
+                self._project_state.map_settings.logical_height,
+            )
+            self._terrain_tab.set_terrain_settings(self._project_state.terrain_settings)
         if project_dir and self._project_state.layers:
             self._layer_manager.load_from_project_layers(self._project_state.layers, project_dir)
         if self._project_state.roads:
@@ -1729,6 +1766,27 @@ class MainWindow(QMainWindow):
         self.canvas_view.refresh_overlay()
         self._refresh_layer_tree()
         self._refresh_painted_layers_ui()
+
+    def _on_terrain_state_changed(self, settings) -> None:
+        self._project_state.terrain_settings = settings
+        self._project_state.touch()
+
+    def _build_terrain_tab_placeholder(self) -> QWidget:
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        label = QLabel(
+            "Terrain sculpt tools are unavailable because optional dependencies are missing.\n\n"
+            "Install the terrain requirements in your virtualenv:\n"
+            "pip install numpy Pillow scipy PyOpenGL PyOpenGL-accelerate"
+        )
+        label.setWordWrap(True)
+        layout.addWidget(label)
+        if _TERRAIN_IMPORT_ERROR is not None:
+            detail = QLabel(f"Import error: {_TERRAIN_IMPORT_ERROR}")
+            detail.setWordWrap(True)
+            layout.addWidget(detail)
+        layout.addStretch(1)
+        return widget
 
     def _apply_project_to_ui(self) -> None:
         self._refresh_project_label()

@@ -17,12 +17,14 @@ if str(SCRIPT_DIR) not in sys.path:
 from blender_collection_utils import find_collection_by_path
 from blender_road_utils import ensure_roads_generated
 from blender_script_utils import bootstrap_src_path, emit_json
+from blender_terrain_utils import create_terrain_plane, displace_terrain_from_heightfield
 
 bootstrap_src_path()
 
 from blender_terrain_material_utils import prepare_runtime_plane_as_terrain
 
 from proc_map_designer.blender_bridge import LayerPlanInput, MapDimensions, plan_generation
+from proc_map_designer.blender_bridge.terrain_sampler import TerrainSampler
 from proc_map_designer.blender_bridge.package_loader import ExportLayerDefinition, load_export_package
 from blender_generate_python_batch import (
     configure_material_viewport,
@@ -173,7 +175,7 @@ def generate_emitters(
             category_cache[layer.category] = category_collection
 
         emitter_collection = create_child_collection(category_collection, layer.name)
-        positions = [runtime_plane.matrix_world @ Vector((placement.x, placement.y, 0.0)) for placement in plan.placements]
+        positions = [Vector((placement.x, placement.y, getattr(placement, "z", 0.0))) for placement in plan.placements]
         emitter = create_point_mesh(f"PM_GN_{layer.name}", positions)
         emitter["pm_layer_id"] = layer.layer_id
         emitter["pm_category"] = layer.category
@@ -208,12 +210,35 @@ def main(argv: list[str]) -> None:
         mask_width=package.map.mask_width,
         mask_height=package.map.mask_height,
     )
-    plans = plan_generation(package.project_id, map_dims, layer_inputs)
+    terrain_sampler = None
+    if package.map.terrain.enabled and package.map.terrain.heightfield_exists:
+        terrain_sampler = TerrainSampler(
+            package.map.terrain.heightfield_path,
+            package.map.terrain.max_height,
+            package.map.width,
+            package.map.height,
+        )
+    plans = plan_generation(package.project_id, map_dims, layer_inputs, terrain_sampler=terrain_sampler)
 
     cleanup_generated_state(args.root_name)
     root_collection = bpy.data.collections.new(args.root_name)
     ensure_collection_linked_to_scene(root_collection)
-    runtime_plane = create_runtime_plane(package.map.width, package.map.height)
+    if package.map.terrain.enabled and package.map.terrain.heightfield_exists:
+        runtime_plane = create_terrain_plane(
+            package.map.width,
+            package.map.height,
+            package.map.terrain.export_subdivision,
+            "PM_RuntimePlane",
+        )
+        displace_terrain_from_heightfield(
+            runtime_plane,
+            heightfield_path=package.map.terrain.heightfield_path,
+            max_height=package.map.terrain.max_height,
+            map_width=package.map.width,
+            map_height=package.map.height,
+        )
+    else:
+        runtime_plane = create_runtime_plane(package.map.width, package.map.height)
     root_collection.objects.link(runtime_plane)
     if bpy.context.scene.collection.objects.get(runtime_plane.name) is not None:
         bpy.context.scene.collection.objects.unlink(runtime_plane)

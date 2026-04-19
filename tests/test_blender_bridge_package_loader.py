@@ -24,7 +24,7 @@ class PackageLoaderTests(unittest.TestCase):
             mask_file.write_bytes(b"fake")
 
             manifest = {
-                "schema_version": 1,
+                "schema_version": 3,
                 "project_id": "proj-123",
                 "source_blend": "/tmp/source.blend",
                 "blender_executable": "/usr/bin/blender",
@@ -35,6 +35,19 @@ class PackageLoaderTests(unittest.TestCase):
                     "unit": "m",
                     "base_plane_object": "BasePlane",
                     "terrain_material_id": "terrain_grass",
+                    "terrain": {
+                        "enabled": False,
+                        "max_height": 10.0,
+                        "export_subdivision": 7,
+                        "heightfield_resolution": 512,
+                        "heightfield_path": "",
+                        "noise_enabled": False,
+                        "noise_scale": 1.0,
+                        "noise_strength": 0.25,
+                        "noise_octaves": 4,
+                        "noise_roughness": 0.5,
+                        "noise_seed": 0
+                    },
                     "mask_resolution": {"width": 4, "height": 4},
                 },
                 "layers": [
@@ -66,6 +79,7 @@ class PackageLoaderTests(unittest.TestCase):
             self.assertEqual(package.project_id, "proj-123")
             self.assertEqual(package.map.base_plane_object, "BasePlane")
             self.assertEqual(package.map.terrain_material_id, "terrain_grass")
+            self.assertFalse(package.map.terrain.enabled)
             self.assertEqual(len(package.layers), 1)
             layer = package.layers[0]
             self.assertTrue(layer.mask_exists)
@@ -76,7 +90,7 @@ class PackageLoaderTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             package_dir = Path(tmp_dir)
             manifest = {
-                "schema_version": 1,
+                "schema_version": 3,
                 "project_id": "proj-456",
                 "source_blend": "/tmp/source.blend",
                 "blender_executable": "/usr/bin/blender",
@@ -87,6 +101,19 @@ class PackageLoaderTests(unittest.TestCase):
                     "unit": "m",
                     "base_plane_object": "Plane",
                     "terrain_material_id": "terrain_dirt",
+                    "terrain": {
+                        "enabled": False,
+                        "max_height": 10.0,
+                        "export_subdivision": 7,
+                        "heightfield_resolution": 512,
+                        "heightfield_path": "",
+                        "noise_enabled": False,
+                        "noise_scale": 1.0,
+                        "noise_strength": 0.25,
+                        "noise_octaves": 4,
+                        "noise_roughness": 0.5,
+                        "noise_seed": 0
+                    },
                     "mask_resolution": {"width": 8, "height": 8},
                 },
                 "layers": [
@@ -126,7 +153,7 @@ class PackageLoaderTests(unittest.TestCase):
             (masks_dir / "ok.png").write_bytes(b"fake")
 
             manifest = {
-                "schema_version": 1,
+                "schema_version": 3,
                 "project_id": "proj-789",
                 "source_blend": "/tmp/source.blend",
                 "blender_executable": "/usr/bin/blender",
@@ -137,6 +164,19 @@ class PackageLoaderTests(unittest.TestCase):
                     "unit": "m",
                     "base_plane_object": "Plane",
                     "terrain_material_id": "terrain_dirt",
+                    "terrain": {
+                        "enabled": False,
+                        "max_height": 10.0,
+                        "export_subdivision": 7,
+                        "heightfield_resolution": 512,
+                        "heightfield_path": "",
+                        "noise_enabled": False,
+                        "noise_scale": 1.0,
+                        "noise_strength": 0.25,
+                        "noise_octaves": 4,
+                        "noise_roughness": 0.5,
+                        "noise_seed": 0
+                    },
                     "mask_resolution": {"width": 8, "height": 8},
                 },
                 "layers": [
@@ -175,7 +215,7 @@ class PackageLoaderTests(unittest.TestCase):
             material_blend.write_bytes(b"blend")
 
             manifest = {
-                "schema_version": 2,
+                "schema_version": 3,
                 "project_id": "proj-road",
                 "source_blend": "/tmp/source.blend",
                 "blender_executable": "/usr/bin/blender",
@@ -186,6 +226,19 @@ class PackageLoaderTests(unittest.TestCase):
                     "unit": "m",
                     "base_plane_object": "BasePlane",
                     "terrain_material_id": "terrain_grass",
+                    "terrain": {
+                        "enabled": False,
+                        "max_height": 10.0,
+                        "export_subdivision": 7,
+                        "heightfield_resolution": 512,
+                        "heightfield_path": "",
+                        "noise_enabled": False,
+                        "noise_scale": 1.0,
+                        "noise_strength": 0.25,
+                        "noise_octaves": 4,
+                        "noise_roughness": 0.5,
+                        "noise_seed": 0
+                    },
                     "mask_resolution": {"width": 4, "height": 4},
                 },
                 "layers": [],

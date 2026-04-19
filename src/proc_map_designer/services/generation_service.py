@@ -59,9 +59,10 @@ class GenerationService:
                 raise GenerationServiceError(f"El .blend fuente no existe: {blend_file}")
             has_enabled_layers = any(layer.enabled for layer in package.layers)
             has_enabled_roads = any(road.visible for road in package.roads)
-            if not has_enabled_layers and not has_enabled_roads:
+            has_enabled_terrain = bool(package.map.terrain.enabled and package.map.terrain.heightfield_exists)
+            if not has_enabled_layers and not has_enabled_roads and not has_enabled_terrain:
                 raise GenerationServiceError(
-                    "No hay contenido habilitado para generar. Activa al menos una capa o dibuja una road visible."
+                    "No hay contenido habilitado para generar. Activa al menos una capa, una road visible o el terrain sculpt."
                 )
 
             resolved_output = self._resolve_output_path(

@@ -47,7 +47,7 @@ class ProjectStateTests(unittest.TestCase):
         payload = state.to_dict()
         loaded = ProjectState.from_dict(payload)
 
-        self.assertEqual(loaded.schema_version, 2)
+        self.assertEqual(loaded.schema_version, 3)
         self.assertEqual(loaded.project_name, "MapaTest")
         self.assertEqual(loaded.source_blend, "/tmp/example.blend")
         self.assertEqual(loaded.output_blend, "/tmp/output.blend")
@@ -56,6 +56,7 @@ class ProjectStateTests(unittest.TestCase):
         self.assertEqual(loaded.map_settings.mask_width, 2048)
         self.assertEqual(loaded.map_settings.base_plane_object, "BasePlane")
         self.assertEqual(loaded.map_settings.terrain_material_id, "terrain_dirt")
+        self.assertFalse(loaded.terrain_settings.enabled)
 
     def test_invalid_schema_version_fails(self) -> None:
         payload = ProjectState.create_new().to_dict()
@@ -158,11 +159,13 @@ class ProjectStateTests(unittest.TestCase):
 
     def test_legacy_project_without_roads_is_supported(self) -> None:
         payload = ProjectState.create_new(project_name="LegacyRoadCompat").to_dict()
-        payload["schema_version"] = 1
+        payload["schema_version"] = 2
         payload.pop("roads", None)
+        payload.pop("terrain_settings", None)
 
         loaded = ProjectState.from_dict(payload)
         self.assertEqual(loaded.roads, [])
+        self.assertFalse(loaded.terrain_settings.enabled)
 
     def test_layer_generation_settings_round_trip(self) -> None:
         state = ProjectState.create_new(project_name="GenLayer")

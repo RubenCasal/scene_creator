@@ -111,6 +111,7 @@ class MapSettingsDialog(QDialog):
             mask_width=self.mask_width_spin.value(),
             mask_height=self.mask_height_spin.value(),
             base_plane_object=self._base_plane_object,
+            terrain_material_id=self._result.terrain_material_id,
         )
 
     def _on_accept(self) -> None:

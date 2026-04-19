@@ -84,6 +84,23 @@ class ExportMapInfo:
     mask_height: int
     base_plane_object: str
     terrain_material_id: str
+    terrain: "ExportTerrainInfo"
+
+
+@dataclass(slots=True)
+class ExportTerrainInfo:
+    enabled: bool
+    max_height: float
+    export_subdivision: int
+    heightfield_resolution: int
+    heightfield_path: Path
+    heightfield_exists: bool
+    noise_enabled: bool
+    noise_scale: float
+    noise_strength: float
+    noise_octaves: int
+    noise_roughness: float
+    noise_seed: int
 
 
 @dataclass(slots=True)
@@ -111,7 +128,7 @@ def load_export_package(project_json_path: Path, *, require_mask_files: bool = F
 
     root = require_mapping(payload, "project.json")
     schema_version = require_int(root.get("schema_version"), "schema_version")
-    if schema_version not in {1, EXPORT_PACKAGE_SCHEMA_VERSION}:
+    if schema_version not in {1, 2, EXPORT_PACKAGE_SCHEMA_VERSION}:
         raise ValueError(
             f"Schema no soportado {schema_version}. Esperado: {EXPORT_PACKAGE_SCHEMA_VERSION}."
         )
@@ -126,6 +143,20 @@ def load_export_package(project_json_path: Path, *, require_mask_files: bool = F
         map_payload.get("mask_resolution", {}),
         "map.mask_resolution",
     )
+    terrain_payload = require_mapping(map_payload.get("terrain", {}), "map.terrain")
+    heightfield_relative = require_string(terrain_payload.get("heightfield_path", ""), "map.terrain.heightfield_path", allow_empty=True)
+    if heightfield_relative:
+        heightfield_path = (package_dir / heightfield_relative).resolve()
+        try:
+            heightfield_path.relative_to(package_dir)
+        except ValueError as exc:
+            raise ValueError(f"El heightfield '{heightfield_relative}' debe residir dentro del paquete exportado.") from exc
+    else:
+        heightfield_path = package_dir / "terrain" / "missing_heightfield.png"
+    heightfield_exists = heightfield_path.exists()
+    if require_mask_files and require_bool(terrain_payload.get("enabled", False), "map.terrain.enabled") and not heightfield_exists:
+        raise ValueError(f"Heightfield de terreno inexistente: {heightfield_path}")
+
     map_info = ExportMapInfo(
         width=require_float(map_payload.get("width"), "map.width", min_value=0.01),
         height=require_float(map_payload.get("height"), "map.height", min_value=0.01),
@@ -140,6 +171,20 @@ def load_export_package(project_json_path: Path, *, require_mask_files: bool = F
         terrain_material_id=require_string(
             map_payload.get("terrain_material_id", "terrain_grass"),
             "map.terrain_material_id",
+        ),
+        terrain=ExportTerrainInfo(
+            enabled=require_bool(terrain_payload.get("enabled", False), "map.terrain.enabled"),
+            max_height=require_float(terrain_payload.get("max_height", 10.0), "map.terrain.max_height", min_value=0.0),
+            export_subdivision=require_int(terrain_payload.get("export_subdivision", 7), "map.terrain.export_subdivision", min_value=4),
+            heightfield_resolution=require_int(terrain_payload.get("heightfield_resolution", 512), "map.terrain.heightfield_resolution", min_value=64),
+            heightfield_path=heightfield_path,
+            heightfield_exists=heightfield_exists,
+            noise_enabled=require_bool(terrain_payload.get("noise_enabled", False), "map.terrain.noise_enabled"),
+            noise_scale=require_float(terrain_payload.get("noise_scale", 1.0), "map.terrain.noise_scale", min_value=0.01),
+            noise_strength=require_float(terrain_payload.get("noise_strength", 0.25), "map.terrain.noise_strength", min_value=0.0, max_value=1.0),
+            noise_octaves=require_int(terrain_payload.get("noise_octaves", 4), "map.terrain.noise_octaves", min_value=1),
+            noise_roughness=require_float(terrain_payload.get("noise_roughness", 0.5), "map.terrain.noise_roughness", min_value=0.0, max_value=1.0),
+            noise_seed=require_int(terrain_payload.get("noise_seed", 0), "map.terrain.noise_seed"),
         ),
     )
 

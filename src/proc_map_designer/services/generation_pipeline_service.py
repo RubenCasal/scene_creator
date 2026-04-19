@@ -84,7 +84,8 @@ class GenerationPipelineService:
             result_path="",
             completed_at=utc_now_iso(),
             used_layer_ids=[layer.layer_id for layer in project.layers if layer.generation_settings.enabled]
-            + [road.road_id for road in project.roads if road.generator.enabled and road.visible],
+            + [road.road_id for road in project.roads if road.generator.enabled and road.visible]
+            + (["terrain/base_plane"] if project.terrain_settings.enabled else []),
             validation_warnings=list(report.warnings),
         )
 
