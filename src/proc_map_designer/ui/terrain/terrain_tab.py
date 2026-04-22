@@ -37,7 +37,9 @@ class TerrainTab(QWidget):
     def save_heightfield(self) -> None:
         path = self._resolve_heightfield_path()
         self._service.save_to_path(path)
-        self._service.settings.heightfield_path = str(path)
+        self._service.settings.heightfield_path = str(path.resolve())
+        self._service.settings.enabled = True
+        self._settings_panel.populate_from_settings(self._service.settings)
         self.terrain_state_changed.emit(self._service.settings)
 
     def set_project_dir(self, project_dir: str) -> None:
@@ -134,9 +136,4 @@ class TerrainTab(QWidget):
         return None
 
     def _serialize_heightfield_path(self, path: Path) -> str:
-        if self._project_dir is not None:
-            try:
-                return path.resolve().relative_to(self._project_dir.resolve()).as_posix()
-            except ValueError:
-                return str(path.resolve())
         return str(path.resolve())

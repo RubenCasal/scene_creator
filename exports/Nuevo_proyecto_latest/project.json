@@ -1,0 +1,51 @@
+{
+  "schema_version": 3,
+  "project_id": "14dc528a-87d6-437e-a218-bcf8c3ba6fac",
+  "source_blend": "/home/ruben/Desktop/mapas_generados/objetos.blend",
+  "blender_executable": "/home/ruben/blender-5.1.0-linux-x64/blender",
+  "output_blend": "/home/ruben/Desktop/scene_generator/working_map.blend",
+  "map": {
+    "width": 200.0,
+    "height": 200.0,
+    "unit": "m",
+    "mask_resolution": {
+      "width": 1024,
+      "height": 1024
+    },
+    "base_plane_object": "Object_2",
+    "terrain_material_id": "terrain_grass",
+    "terrain": {
+      "enabled": false,
+      "max_height": 10.0,
+      "export_subdivision": 7,
+      "heightfield_resolution": 512,
+      "heightfield_path": "terrain/heightfield.png",
+      "noise_enabled": false,
+      "noise_scale": 1.0,
+      "noise_strength": 0.25,
+      "noise_octaves": 4,
+      "noise_roughness": 0.5,
+      "noise_seed": 0
+    }
+  },
+  "layers": [
+    {
+      "category": "Vegetation",
+      "name": "Vegetation/Tree",
+      "blender_collection": "Vegetation/Tree",
+      "enabled": true,
+      "mask_path": "masks/000_Vegetation_Tree.png",
+      "settings": {
+        "density": 1.0,
+        "min_distance": 0.0,
+        "allow_overlap": true,
+        "scale_min": 1.0,
+        "scale_max": 1.0,
+        "rotation_random_z": 180.0,
+        "seed": 2268868583,
+        "priority": 0
+      }
+    }
+  ],
+  "roads": []
+}

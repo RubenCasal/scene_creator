@@ -1126,11 +1126,15 @@ class MainWindow(QMainWindow):
 
     def _normalize_output_path(self, raw_path: str) -> str:
         path_text = raw_path.strip()
-        if not path_text:
+        if not path_text or len(path_text) > 4096:
             return ""
 
         candidate = Path(path_text).expanduser()
-        if candidate.exists() and candidate.is_dir():
+        try:
+            is_dir = candidate.exists() and candidate.is_dir()
+        except OSError:
+            return ""
+        if is_dir:
             return str((candidate / "working_map.blend").resolve())
         if candidate.suffix.lower() == ".blend":
             return str(candidate.resolve())
