@@ -22,12 +22,13 @@ class TerrainSettingsPanel(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setFixedWidth(220)
+        self.setFixedWidth(200)
         layout = QVBoxLayout(self)
 
         terrain_group = QGroupBox("Terrain Config")
         terrain_form = QFormLayout(terrain_group)
         self.enabled_check = QCheckBox()
+        self.enabled_check.setProperty("toggle", True)
         terrain_form.addRow("Enabled", self.enabled_check)
         self.max_height_spin = QDoubleSpinBox()
         self.max_height_spin.setRange(0.0, 1000.0)
@@ -48,6 +49,7 @@ class TerrainSettingsPanel(QWidget):
         noise_group = QGroupBox("Procedural Noise")
         noise_form = QFormLayout(noise_group)
         self.noise_enabled_check = QCheckBox()
+        self.noise_enabled_check.setProperty("toggle", True)
         noise_form.addRow("Enabled", self.noise_enabled_check)
         self.noise_scale_spin = QDoubleSpinBox()
         self.noise_scale_spin.setRange(0.01, 100.0)

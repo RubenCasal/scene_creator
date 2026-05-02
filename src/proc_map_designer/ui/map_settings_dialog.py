@@ -21,7 +21,7 @@ from proc_map_designer.ui.map_preview_widget import MapPreviewWidget
 class MapSettingsDialog(QDialog):
     def __init__(self, current: MapSettings, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Configurar mapa")
+        self.setWindowTitle("Map Settings")
         self.resize(620, 420)
         self._result = current
         self._base_plane_object = current.base_plane_object
@@ -29,7 +29,7 @@ class MapSettingsDialog(QDialog):
         layout = QVBoxLayout(self)
 
         info_label = QLabel(
-            "Define tamaño lógico del mapa (mundo) y resolución raster interna (máscaras)."
+            "Define the logical map size and the internal raster resolution used for masks."
         )
         info_label.setWordWrap(True)
         layout.addWidget(info_label)
@@ -45,14 +45,14 @@ class MapSettingsDialog(QDialog):
         self.width_spin.setDecimals(2)
         self.width_spin.setValue(current.logical_width)
         self.width_spin.setSuffix(f" {current.logical_unit}")
-        form_layout.addRow("Ancho lógico:", self.width_spin)
+        form_layout.addRow("Logical Width:", self.width_spin)
 
         self.height_spin = QDoubleSpinBox()
         self.height_spin.setRange(0.01, 100000.0)
         self.height_spin.setDecimals(2)
         self.height_spin.setValue(current.logical_height)
         self.height_spin.setSuffix(f" {current.logical_unit}")
-        form_layout.addRow("Alto lógico:", self.height_spin)
+        form_layout.addRow("Logical Height:", self.height_spin)
 
         self.unit_combo = QComboBox()
         self.unit_combo.setEditable(True)
@@ -62,19 +62,19 @@ class MapSettingsDialog(QDialog):
             self.unit_combo.setCurrentIndex(current_index)
         else:
             self.unit_combo.setCurrentText(current.logical_unit)
-        form_layout.addRow("Unidad lógica:", self.unit_combo)
+        form_layout.addRow("Logical Unit:", self.unit_combo)
 
         self.mask_width_spin = QSpinBox()
         self.mask_width_spin.setRange(64, 16384)
         self.mask_width_spin.setSingleStep(64)
         self.mask_width_spin.setValue(current.mask_width)
-        form_layout.addRow("Resolución máscara X:", self.mask_width_spin)
+        form_layout.addRow("Mask Resolution X:", self.mask_width_spin)
 
         self.mask_height_spin = QSpinBox()
         self.mask_height_spin.setRange(64, 16384)
         self.mask_height_spin.setSingleStep(64)
         self.mask_height_spin.setValue(current.mask_height)
-        form_layout.addRow("Resolución máscara Y:", self.mask_height_spin)
+        form_layout.addRow("Mask Resolution Y:", self.mask_height_spin)
 
         self.preview = MapPreviewWidget()
         self.preview.set_map_settings(current)

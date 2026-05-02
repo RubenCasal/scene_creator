@@ -164,7 +164,7 @@ class LayerMaskManager:
 
             mask = layer.mask_image or self._new_empty_mask()
             if not mask.save(str(mask_path), "PNG"):
-                raise RuntimeError(f"No se pudo guardar la máscara de la capa '{layer.layer_id}'.")
+                raise RuntimeError(f"Could not save the mask for layer '{layer.layer_id}'.")
 
             relative = mask_path.relative_to(project_dir).as_posix()
             layer.mask_data_path = relative
@@ -229,7 +229,7 @@ class LayerMaskManager:
         for layer_id in layer_order:
             layer = self._layers.get(layer_id)
             if layer is None:
-                raise RuntimeError(f"No existe la capa '{layer_id}' para exportar máscara.")
+                raise RuntimeError(f"Layer '{layer_id}' does not exist for mask export.")
             mask = layer.mask_image or self._new_empty_mask()
             snapshots[layer_id] = mask.copy()
         return snapshots
@@ -248,7 +248,7 @@ class LayerMaskManager:
         for index, layer_id in enumerate(layer_order):
             mask = mask_snapshots.get(layer_id)
             if mask is None:
-                raise RuntimeError(f"No existe la capa '{layer_id}' para exportar máscara.")
+                raise RuntimeError(f"Layer '{layer_id}' does not exist for mask export.")
 
             filename = f"{index:03d}_{_sanitize_layer_id(layer_id)}.png"
             mask_path = masks_dir / filename
@@ -261,7 +261,7 @@ class LayerMaskManager:
                     Qt.TransformationMode.SmoothTransformation,
                 )
             if not grayscale.save(str(mask_path), "PNG"):
-                raise RuntimeError(f"No se pudo exportar la máscara de la capa '{layer_id}'.")
+                raise RuntimeError(f"Could not export the mask for layer '{layer_id}'.")
 
             exported[layer_id] = mask_path.relative_to(package_dir).as_posix()
 

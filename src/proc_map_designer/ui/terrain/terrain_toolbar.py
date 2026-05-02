@@ -15,16 +15,32 @@ class TerrainToolbar(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setFixedWidth(120)
+        self.setFixedWidth(112)
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setSpacing(8)
         self._group = QButtonGroup(self)
+        self._group.setExclusive(True)
+        self._tool_buttons: list[QPushButton] = []
+        labels = {
+            "raise": "R+",
+            "lower": "R-",
+            "smooth": "Sm",
+            "flatten": "Fl",
+            "noise": "Ns",
+            "ramp": "Rp",
+        }
         for index, tool in enumerate(["raise", "lower", "smooth", "flatten", "noise", "ramp"]):
-            button = QPushButton(tool.title())
+            button = QPushButton(labels[tool])
             button.setCheckable(True)
+            button.setFixedSize(36, 36)
+            button.setToolTip(tool.title())
+            button.setProperty("tool", True)
             if index == 0:
                 button.setChecked(True)
-            button.clicked.connect(lambda checked=False, t=tool: self.tool_changed.emit(t))
+            button.clicked.connect(lambda checked=False, t=tool: self._on_tool_clicked(t))
             self._group.addButton(button)
+            self._tool_buttons.append(button)
             layout.addWidget(button)
 
         self.radius_slider = QSlider(Qt.Orientation.Horizontal)
@@ -55,3 +71,14 @@ class TerrainToolbar(QWidget):
         reset_button.clicked.connect(self.reset_requested.emit)
         layout.addWidget(reset_button)
         layout.addStretch(1)
+        self._refresh_tool_button_state()
+
+    def _on_tool_clicked(self, tool: str) -> None:
+        self._refresh_tool_button_state()
+        self.tool_changed.emit(tool)
+
+    def _refresh_tool_button_state(self) -> None:
+        for button in self._tool_buttons:
+            button.setProperty("accent", button.isChecked())
+            button.style().unpolish(button)
+            button.style().polish(button)

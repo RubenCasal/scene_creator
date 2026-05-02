@@ -80,7 +80,7 @@ class TerrainViewport(QOpenGLWidget):
         glViewport(0, 0, width, height)
 
     def paintGL(self) -> None:  # pragma: no cover - GL runtime
-        glClearColor(0.15, 0.16, 0.18, 1.0)
+        glClearColor(0.067, 0.094, 0.153, 1.0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         if self._mesh is None or self._program is None:
             return

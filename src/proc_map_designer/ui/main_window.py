@@ -2,16 +2,22 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+import html
 from pathlib import Path
 
 from PySide6.QtCore import QObject, Qt, QThread, Signal, Slot
-from PySide6.QtGui import QAction, QCloseEvent, QColor, QFont
+from PySide6.QtGui import QAction, QCloseEvent, QColor, QFont, QIcon, QPainter, QPixmap
+from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import (
+    QApplication,
     QComboBox,
     QCheckBox,
     QDoubleSpinBox,
+    QFrame,
     QFileDialog,
     QFormLayout,
+    QGroupBox,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -19,14 +25,11 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QMainWindow,
     QMessageBox,
-    QPlainTextEdit,
     QPushButton,
-    QSizePolicy,
+    QTextEdit,
     QSlider,
     QStackedWidget,
     QSplitter,
-    QTableWidget,
-    QTableWidgetItem,
     QTabWidget,
     QToolBar,
     QTreeWidget,
@@ -55,6 +58,8 @@ from proc_map_designer.ui.canvas.canvas_view import CanvasView
 from proc_map_designer.ui.canvas.layer_mask_manager import LayerMaskManager
 from proc_map_designer.ui.canvas.road_manager import RoadManager
 from proc_map_designer.ui.map_settings_dialog import MapSettingsDialog
+from proc_map_designer.ui.stepper_bar import StepperBar
+from proc_map_designer.ui.style.icons import load_svg_icon
 
 try:
     from proc_map_designer.ui.terrain import TerrainTab
@@ -90,14 +95,14 @@ class InspectionWorker(QObject):
 
     @Slot()
     def run(self) -> None:
-        self.log.emit(f"Inspeccionando: {self._blend_file}")
+        self.log.emit(f"Inspecting: {self._blend_file}")
         try:
             result = self._service.inspect(self._blend_file)
         except BlendInspectionError as exc:
             self.failed.emit(str(exc))
             return
         except Exception as exc:  # pragma: no cover
-            self.failed.emit(f"Error inesperado: {exc}")
+            self.failed.emit(f"Unexpected error: {exc}")
             return
         self.finished.emit(result)
 
@@ -152,8 +157,8 @@ class PipelineWorker(QObject):
                 )
             elif self._operation == "final_export":
                 if self._latest_output is None or self._destination_path is None:
-                    raise GenerationPipelineError("Faltan datos para exportación final.")
-                self.log.emit(f"Exportando resultado final a: {self._destination_path}")
+                    raise GenerationPipelineError("Missing data for final export.")
+                self.log.emit(f"Exporting final result to: {self._destination_path}")
                 result = self._pipeline_service.final_export(
                     self._latest_output,
                     self._destination_path,
@@ -161,13 +166,13 @@ class PipelineWorker(QObject):
                     state=self.state_changed.emit,
                 )
             else:
-                raise GenerationPipelineError(f"Operación de pipeline no soportada: {self._operation}")
+                raise GenerationPipelineError(f"Unsupported pipeline operation: {self._operation}")
         except GenerationPipelineError as exc:
             self.state_changed.emit("failed")
             self.failed.emit(str(exc), self._build_failed_metadata(str(exc)))
             return
         except Exception as exc:  # pragma: no cover
-            message = f"Error inesperado en pipeline: {exc}"
+            message = f"Unexpected pipeline error: {exc}"
             self.state_changed.emit("failed")
             self.failed.emit(message, self._build_failed_metadata(message))
             return
@@ -234,6 +239,8 @@ class MainWindow(QMainWindow):
         self._updating_parameter_form = False
 
         self.setWindowTitle("Procedural Map Designer")
+        self._apply_stylesheet(Path(__file__).parent / "style" / "theme.qss")
+        self.setWindowIcon(self._load_svg_icon(Path(__file__).resolve().parents[3] / "logo" / "icon_logo_white.svg", 32))
         self.resize(1380, 860)
         self._build_actions()
         self._build_menu_and_toolbar()
@@ -242,38 +249,38 @@ class MainWindow(QMainWindow):
         self._populate_backend_choices()
         self._wire_canvas()
         self._apply_project_to_ui()
-        self._append_log("Proyecto nuevo inicializado.")
+        self._append_log("New project initialized.")
 
     def _build_actions(self) -> None:
-        self.action_new_project = QAction("Nuevo proyecto", self)
+        self.action_new_project = QAction("New Project", self)
         self.action_new_project.triggered.connect(self._new_project)
 
-        self.action_open_project = QAction("Abrir proyecto", self)
+        self.action_open_project = QAction("Open Project", self)
         self.action_open_project.triggered.connect(self._open_project)
 
-        self.action_save_project = QAction("Guardar proyecto", self)
+        self.action_save_project = QAction("Save Project", self)
         self.action_save_project.triggered.connect(self._save_project)
 
-        self.action_save_project_as = QAction("Guardar como...", self)
+        self.action_save_project_as = QAction("Save As...", self)
         self.action_save_project_as.triggered.connect(self._save_project_as)
 
-        self.action_configure_map = QAction("Configurar mapa", self)
+        self.action_configure_map = QAction("Map Settings", self)
         self.action_configure_map.triggered.connect(self._configure_map)
 
-        self.action_validate_pipeline = QAction("Validar", self)
+        self.action_validate_pipeline = QAction("Validate", self)
         self.action_validate_pipeline.triggered.connect(self._validate_pipeline)
 
-        self.action_generate = QAction("Generar", self)
+        self.action_generate = QAction("Generate", self)
         self.action_generate.triggered.connect(self._generate_pipeline)
 
-        self.action_open_result = QAction("Abrir resultado", self)
+        self.action_open_result = QAction("Open Result", self)
         self.action_open_result.triggered.connect(self._open_result)
 
-        self.action_final_export = QAction("Exportación final", self)
+        self.action_final_export = QAction("Final Export", self)
         self.action_final_export.triggered.connect(self._final_export)
 
     def _build_menu_and_toolbar(self) -> None:
-        project_menu = self.menuBar().addMenu("Proyecto")
+        project_menu = self.menuBar().addMenu("Project")
         project_menu.addAction(self.action_new_project)
         project_menu.addAction(self.action_open_project)
         project_menu.addSeparator()
@@ -288,8 +295,34 @@ class MainWindow(QMainWindow):
         pipeline_menu.addAction(self.action_open_result)
         pipeline_menu.addAction(self.action_final_export)
 
-        toolbar = QToolBar("Proyecto", self)
+        toolbar = QToolBar("Project", self)
         toolbar.setMovable(False)
+        toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        name_logo = QLabel()
+        name_logo.setPixmap(self._load_svg_pixmap(Path(__file__).resolve().parents[3] / "logo" / "name_logo_white.svg", 80, 24))
+        toolbar.addWidget(name_logo)
+        toolbar.addSeparator()
+        self.action_new_project.setIcon(load_svg_icon("new"))
+        self.action_open_project.setIcon(load_svg_icon("open"))
+        self.action_save_project.setIcon(load_svg_icon("save"))
+        self.action_configure_map.setIcon(load_svg_icon("settings"))
+        self.action_validate_pipeline.setIcon(load_svg_icon("validate"))
+        self.action_generate.setIcon(load_svg_icon("generate"))
+        self.action_open_result.setIcon(load_svg_icon("open_result"))
+        self.action_final_export.setIcon(load_svg_icon("export"))
+        self.action_save_project_as.setIcon(load_svg_icon("save"))
+        for action in [
+            self.action_new_project,
+            self.action_open_project,
+            self.action_save_project,
+            self.action_save_project_as,
+            self.action_configure_map,
+            self.action_validate_pipeline,
+            self.action_generate,
+            self.action_open_result,
+            self.action_final_export,
+        ]:
+            action.setToolTip(action.text())
         toolbar.addAction(self.action_new_project)
         toolbar.addAction(self.action_open_project)
         toolbar.addAction(self.action_save_project)
@@ -300,6 +333,7 @@ class MainWindow(QMainWindow):
         toolbar.addAction(self.action_validate_pipeline)
         toolbar.addAction(self.action_generate)
         toolbar.addAction(self.action_open_result)
+        toolbar.addAction(self.action_final_export)
         self.addToolBar(toolbar)
 
     def _build_ui(self) -> None:
@@ -307,35 +341,46 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central_widget)
 
         root_layout = QVBoxLayout(central_widget)
-        root_layout.setContentsMargins(8, 8, 8, 8)
-        root_layout.setSpacing(8)
+        root_layout.setContentsMargins(12, 12, 12, 12)
+        root_layout.setSpacing(10)
 
-        self.project_label = QLabel("Proyecto: sin guardar")
-        self.project_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        root_layout.addWidget(self.project_label)
+        self._header_bar = QWidget()
+        self._header_bar.setFixedHeight(42)
+        header_layout = QHBoxLayout(self._header_bar)
+        header_layout.setContentsMargins(8, 0, 8, 0)
+        header_layout.setSpacing(8)
+        self._header_logo = QLabel()
+        self._header_logo.setPixmap(self._load_svg_pixmap(Path(__file__).resolve().parents[3] / "logo" / "icon_logo_white.svg", 24, 24))
+        header_layout.addWidget(self._header_logo)
+        self._header_project_name = QLabel()
+        self._header_project_name.setProperty("title", True)
+        header_font = QFont()
+        header_font.setBold(True)
+        self._header_project_name.setFont(header_font)
+        self._header_project_name.setMaximumWidth(260)
+        header_layout.addWidget(self._header_project_name)
+        separator = QFrame()
+        separator.setFrameShape(QFrame.Shape.VLine)
+        separator.setStyleSheet("color:#4b5563;")
+        header_layout.addWidget(separator)
+        self._header_map_info = QLabel()
+        self._header_map_info.setProperty("secondary", True)
+        header_layout.addWidget(self._header_map_info)
+        header_layout.addStretch(1)
+        self._header_pipeline_pill = QLabel()
+        self._header_pipeline_pill.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._header_pipeline_pill.setFixedHeight(24)
+        self._header_pipeline_pill.setMinimumWidth(96)
+        header_layout.addWidget(self._header_pipeline_pill)
+        self._header_output_chip = QLabel()
+        self._header_output_chip.setProperty("secondary", True)
+        self._header_output_chip.setMaximumWidth(340)
+        header_layout.addWidget(self._header_output_chip)
+        root_layout.addWidget(self._header_bar)
 
-        self.blend_file_label = QLabel("Blend fuente: ninguno")
-        self.blend_file_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        root_layout.addWidget(self.blend_file_label)
-
-        self.blender_path_label = QLabel()
-        root_layout.addWidget(self.blender_path_label)
-
-        self.map_summary_label = QLabel()
-        root_layout.addWidget(self.map_summary_label)
-
-        self.pipeline_state_label = QLabel("Pipeline: inactivo")
-        root_layout.addWidget(self.pipeline_state_label)
-
-        self.latest_output_label = QLabel("Último resultado: ninguno")
-        self.latest_output_label.setWordWrap(True)
-        root_layout.addWidget(self.latest_output_label)
-
-        self.step_title_label = QLabel("Paso 1 de 3: Selección y configuración")
-        step_font = QFont()
-        step_font.setBold(True)
-        self.step_title_label.setFont(step_font)
-        root_layout.addWidget(self.step_title_label)
+        self._stepper_bar = StepperBar(["Setup", "Paint", "Generate"])
+        self._stepper_bar.step_clicked.connect(self._on_stepper_clicked)
+        root_layout.addWidget(self._stepper_bar)
 
         self.content_splitter = QSplitter(Qt.Orientation.Vertical)
         self.content_splitter.setChildrenCollapsible(False)
@@ -348,17 +393,21 @@ class MainWindow(QMainWindow):
         self._build_paint_step()
         self._build_generate_step()
 
-        self.log_panel = QPlainTextEdit()
+        self.log_header_label = QLabel("Output Log")
+        self.log_header_label.setProperty("secondary", True)
+        self.content_splitter.addWidget(self.log_header_label)
+        self.log_panel = QTextEdit()
         self.log_panel.setReadOnly(True)
-        self.log_panel.setMaximumBlockCount(700)
-        self.log_panel.setPlaceholderText("Logs básicos de ejecución...")
+        self.log_panel.document().setMaximumBlockCount(700)
+        self.log_panel.setPlaceholderText("Execution logs...")
         self.log_panel.setMinimumHeight(90)
         self.content_splitter.addWidget(self.log_panel)
         self.content_splitter.setStretchFactor(0, 5)
-        self.content_splitter.setStretchFactor(1, 1)
-        self.content_splitter.setSizes([780, 110])
+        self.content_splitter.setStretchFactor(1, 0)
+        self.content_splitter.setStretchFactor(2, 1)
+        self.content_splitter.setSizes([760, 24, 180])
 
-        self.statusBar().showMessage("Listo.")
+        self.statusBar().showMessage("Ready.")
 
     def _build_setup_step(self) -> None:
         page = QWidget()
@@ -366,36 +415,47 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(10)
 
-        intro = QLabel(
-            "Selecciona el archivo .blend, configura Blender y define el tamaño del mapa antes de continuar."
-        )
-        intro.setWordWrap(True)
-        layout.addWidget(intro)
+        cards_layout = QGridLayout()
+        cards_layout.setHorizontalSpacing(10)
+        cards_layout.setVerticalSpacing(10)
 
-        controls_layout = QHBoxLayout()
-        self.select_blend_button = QPushButton("Seleccionar .blend")
+        scene_card = QGroupBox("Scene Source")
+        scene_layout = QVBoxLayout(scene_card)
+        scene_layout.setSpacing(8)
+        self.select_blend_button = QPushButton("📁 Select .blend file")
+        self.select_blend_button.setProperty("accent", True)
         self.select_blend_button.clicked.connect(self._on_select_blend)
-        controls_layout.addWidget(self.select_blend_button)
-
-        self.configure_blender_button = QPushButton("Configurar Blender")
+        scene_layout.addWidget(self.select_blend_button)
+        self.setup_blend_info_label = QLabel("No .blend selected")
+        self.setup_blend_info_label.setProperty("secondary", True)
+        self.setup_blend_info_label.setWordWrap(True)
+        scene_layout.addWidget(self.setup_blend_info_label)
+        self.configure_blender_button = QPushButton("⚙ Configure Blender executable")
         self.configure_blender_button.clicked.connect(self._on_configure_blender)
-        controls_layout.addWidget(self.configure_blender_button)
-        controls_layout.addStretch(1)
-        layout.addLayout(controls_layout)
+        scene_layout.addWidget(self.configure_blender_button)
+        self.setup_blender_info_label = QLabel("Blender not configured")
+        self.setup_blender_info_label.setProperty("secondary", True)
+        self.setup_blender_info_label.setWordWrap(True)
+        scene_layout.addWidget(self.setup_blender_info_label)
+        scene_layout.addStretch(1)
 
-        form_layout = QFormLayout()
+        settings_card = QGroupBox("Map Settings")
+        form_layout = QFormLayout(settings_card)
+        form_layout.setHorizontalSpacing(10)
+        form_layout.setVerticalSpacing(8)
+        form_layout.setContentsMargins(12, 14, 12, 12)
 
         self.setup_map_width_spin = QDoubleSpinBox()
         self.setup_map_width_spin.setRange(1.0, 100000.0)
         self.setup_map_width_spin.setDecimals(2)
         self.setup_map_width_spin.editingFinished.connect(self._on_setup_map_changed)
-        form_layout.addRow("Ancho mapa", self.setup_map_width_spin)
+        form_layout.addRow("Map Width", self.setup_map_width_spin)
 
         self.setup_map_height_spin = QDoubleSpinBox()
         self.setup_map_height_spin.setRange(1.0, 100000.0)
         self.setup_map_height_spin.setDecimals(2)
         self.setup_map_height_spin.editingFinished.connect(self._on_setup_map_changed)
-        form_layout.addRow("Alto mapa", self.setup_map_height_spin)
+        form_layout.addRow("Map Height", self.setup_map_height_spin)
 
         self.setup_mask_width_spin = QSpinBox()
         self.setup_mask_width_spin.setRange(1, 8192)
@@ -407,12 +467,26 @@ class MainWindow(QMainWindow):
         self.setup_mask_height_spin.editingFinished.connect(self._on_setup_map_changed)
         form_layout.addRow("Mask height", self.setup_mask_height_spin)
 
+        self.advanced_map_button = QPushButton("⚙ Advanced map config...")
+        self.advanced_map_button.clicked.connect(self._configure_map)
+        form_layout.addRow(self.advanced_map_button)
+
+        cards_layout.addWidget(scene_card, 0, 0)
+        cards_layout.addWidget(settings_card, 0, 1)
+        layout.addLayout(cards_layout)
+
+        output_card = QGroupBox("Output")
+        output_layout = QFormLayout(output_card)
+        output_layout.setHorizontalSpacing(10)
+        output_layout.setVerticalSpacing(8)
+        output_layout.setContentsMargins(12, 14, 12, 12)
+
         self.terrain_material_combo = QComboBox()
         self.terrain_material_combo.currentIndexChanged.connect(self._on_terrain_material_changed)
-        form_layout.addRow("Terrain texture", self.terrain_material_combo)
+        output_layout.addRow("Terrain texture", self.terrain_material_combo)
 
         self.output_path_edit = QLineEdit()
-        self.output_path_edit.setPlaceholderText("Ruta de salida/resultados")
+        self.output_path_edit.setPlaceholderText("Output/result path")
         self.output_path_edit.editingFinished.connect(self._on_output_path_changed)
         output_layout = QHBoxLayout()
         output_layout.addWidget(self.output_path_edit)
@@ -421,14 +495,21 @@ class MainWindow(QMainWindow):
         output_layout.addWidget(self.browse_output_button)
         output_widget = QWidget()
         output_widget.setLayout(output_layout)
-        form_layout.addRow("Ruta salida", output_widget)
+        output_card_layout = output_card.layout()
+        assert isinstance(output_card_layout, QFormLayout)
+        output_card_layout.addRow("Path", output_widget)
 
-        layout.addLayout(form_layout)
+        self.backend_combo = QComboBox()
+        self.backend_combo.currentIndexChanged.connect(self._on_backend_changed)
+        output_card_layout.addRow("Backend", self.backend_combo)
+
+        layout.addWidget(output_card)
         layout.addStretch(1)
 
         nav_layout = QHBoxLayout()
         nav_layout.addStretch(1)
-        self.setup_next_button = QPushButton("Next")
+        self.setup_next_button = QPushButton("→ Paint")
+        self.setup_next_button.setProperty("accent", True)
         self.setup_next_button.clicked.connect(self._go_to_paint_step)
         nav_layout.addWidget(self.setup_next_button)
         layout.addLayout(nav_layout)
@@ -441,39 +522,30 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
 
-        intro = QLabel(
-            "Pinta las subcollections que quieres generar. Al continuar solo aparecerán las capas que tengan pintura."
-        )
-        intro.setWordWrap(True)
-        layout.addWidget(intro)
-
         splitter = QSplitter()
         layout.addWidget(splitter, stretch=1)
 
         left_panel = QWidget()
         left_layout = QVBoxLayout(left_panel)
         left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.setSpacing(6)
+        left_layout.setSpacing(8)
 
-        left_splitter = QSplitter(Qt.Orientation.Vertical)
-        left_splitter.setChildrenCollapsible(False)
-        left_layout.addWidget(left_splitter, stretch=1)
-
-        tree_panel = QWidget()
-        tree_layout = QVBoxLayout(tree_panel)
-        tree_layout.setContentsMargins(0, 0, 0, 0)
-        tree_layout.setSpacing(6)
-
-        layer_title = QLabel("Capas pintables")
-        layer_font = QFont()
-        layer_font.setBold(True)
-        layer_title.setFont(layer_font)
-        tree_layout.addWidget(layer_title)
+        layer_group = QGroupBox("Layers")
+        tree_layout = QVBoxLayout(layer_group)
+        tree_layout.setSpacing(8)
+        header_layout = QHBoxLayout()
+        header_layout.addStretch(1)
+        self.clear_layer_button = QPushButton()
+        self.clear_layer_button.setIcon(load_svg_icon("clear"))
+        self.clear_layer_button.setToolTip("Clear active layer")
+        self.clear_layer_button.clicked.connect(self._clear_active_layer)
+        header_layout.addWidget(self.clear_layer_button)
+        tree_layout.addLayout(header_layout)
 
         self.layer_tree = QTreeWidget()
         self.layer_tree.setHeaderLabels(["Layer"])
         self.layer_tree.setAlternatingRowColors(True)
-        self.layer_tree.setMinimumWidth(300)
+        self.layer_tree.setMinimumWidth(240)
         self.layer_tree.setIndentation(20)
         self.layer_tree.setUniformRowHeights(False)
         tree_font = self.layer_tree.font()
@@ -484,21 +556,12 @@ class MainWindow(QMainWindow):
         self.layer_tree.itemSelectionChanged.connect(self._on_layer_selection_changed)
         tree_layout.addWidget(self.layer_tree, stretch=1)
 
-        controls_panel = QWidget()
-        controls_layout = QVBoxLayout(controls_panel)
-        controls_layout.setContentsMargins(0, 0, 0, 0)
-        controls_layout.setSpacing(6)
+        brush_group = QGroupBox("Brush")
+        controls_layout = QVBoxLayout(brush_group)
+        controls_layout.setSpacing(8)
 
-        self.roads_hint_label = QLabel(
-            "Road aparece en este árbol aunque no exista en el .blend. Selecciona 'Road > Nueva road' para dibujar carreteras procedurales."
-        )
-        self.roads_hint_label.setWordWrap(True)
-        controls_layout.addWidget(self.roads_hint_label)
-
-        self.active_layer_label = QLabel("Capa activa: ninguna")
-        controls_layout.addWidget(self.active_layer_label)
-
-        self.brush_size_label = QLabel(f"Tamaño pincel: {self._brush_tool.radius_px}px")
+        self.brush_size_label = QLabel(f"Size  {self._brush_tool.radius_px}px")
+        self.brush_size_label.setProperty("secondary", True)
         controls_layout.addWidget(self.brush_size_label)
         self.brush_size_slider = QSlider(Qt.Orientation.Horizontal)
         self.brush_size_slider.setRange(1, 256)
@@ -506,7 +569,8 @@ class MainWindow(QMainWindow):
         self.brush_size_slider.valueChanged.connect(self._on_brush_size_changed)
         controls_layout.addWidget(self.brush_size_slider)
 
-        self.brush_intensity_label = QLabel(f"Intensidad: {int(self._brush_tool.intensity * 100)}%")
+        self.brush_intensity_label = QLabel(f"Intensity  {int(self._brush_tool.intensity * 100)}%")
+        self.brush_intensity_label.setProperty("secondary", True)
         controls_layout.addWidget(self.brush_intensity_label)
         self.brush_intensity_slider = QSlider(Qt.Orientation.Horizontal)
         self.brush_intensity_slider.setRange(1, 100)
@@ -515,13 +579,13 @@ class MainWindow(QMainWindow):
         controls_layout.addWidget(self.brush_intensity_slider)
 
         mode_layout = QHBoxLayout()
-        self.paint_mode_button = QPushButton("Pintar")
+        self.paint_mode_button = QPushButton("Paint")
         self.paint_mode_button.setCheckable(True)
         self.paint_mode_button.setChecked(True)
         self.paint_mode_button.clicked.connect(lambda: self._set_brush_mode("paint"))
         mode_layout.addWidget(self.paint_mode_button)
 
-        self.erase_mode_button = QPushButton("Borrar")
+        self.erase_mode_button = QPushButton("Erase")
         self.erase_mode_button.setCheckable(True)
         self.erase_mode_button.setChecked(False)
         self.erase_mode_button.clicked.connect(lambda: self._set_brush_mode("erase"))
@@ -529,37 +593,37 @@ class MainWindow(QMainWindow):
 
         controls_layout.addLayout(mode_layout)
 
-        self.road_width_label = QLabel(f"Ancho road: {self._brush_tool.radius_px:.0f}")
-        controls_layout.addWidget(self.road_width_label)
+        self.road_group = QGroupBox("Road")
+        road_layout = QVBoxLayout(self.road_group)
+        road_layout.setSpacing(8)
+        self.road_width_label = QLabel(f"Width  {self._brush_tool.radius_px:.0f}")
+        self.road_width_label.setProperty("secondary", True)
+        road_layout.addWidget(self.road_width_label)
         self.road_width_slider = QSlider(Qt.Orientation.Horizontal)
         self.road_width_slider.setRange(1, 128)
         self.road_width_slider.setValue(self._brush_tool.radius_px)
         self.road_width_slider.valueChanged.connect(self._on_road_width_changed)
-        controls_layout.addWidget(self.road_width_slider)
+        road_layout.addWidget(self.road_width_slider)
 
-        self.road_profile_label = QLabel("Perfil road")
-        controls_layout.addWidget(self.road_profile_label)
+        self.road_profile_label = QLabel("Profile")
+        self.road_profile_label.setProperty("secondary", True)
+        road_layout.addWidget(self.road_profile_label)
         self.road_profile_combo = QComboBox()
         self.road_profile_combo.addItem("Single", "single")
         self.road_profile_combo.addItem("Double", "double")
         self.road_profile_combo.setCurrentIndex(0)
         self.road_profile_combo.currentIndexChanged.connect(self._on_road_profile_changed)
-        controls_layout.addWidget(self.road_profile_combo)
+        road_layout.addWidget(self.road_profile_combo)
 
-        self.clear_layer_button = QPushButton("Limpiar capa activa")
-        self.clear_layer_button.clicked.connect(self._clear_active_layer)
-        controls_layout.addWidget(self.clear_layer_button)
-
-        self.remove_last_road_button = QPushButton("Eliminar última road")
+        self.remove_last_road_button = QPushButton("Delete Last Road")
         self.remove_last_road_button.clicked.connect(self._remove_last_road)
-        controls_layout.addWidget(self.remove_last_road_button)
-        controls_layout.addStretch(1)
+        self.remove_last_road_button.setProperty("danger", True)
+        road_layout.addWidget(self.remove_last_road_button)
 
-        left_splitter.addWidget(tree_panel)
-        left_splitter.addWidget(controls_panel)
-        left_splitter.setStretchFactor(0, 3)
-        left_splitter.setStretchFactor(1, 1)
-        left_splitter.setSizes([560, 220])
+        left_layout.addWidget(layer_group, stretch=1)
+        left_layout.addWidget(brush_group, stretch=0)
+        left_layout.addWidget(self.road_group, stretch=0)
+        self.road_group.setVisible(False)
 
         splitter.addWidget(left_panel)
 
@@ -577,18 +641,18 @@ class MainWindow(QMainWindow):
             self._terrain_tab.terrain_state_changed.connect(self._on_terrain_state_changed)
         self.paint_tab_widget.addTab(self._terrain_tab, "Terrain")
         splitter.addWidget(self.paint_tab_widget)
-        left_panel.setMinimumWidth(320)
+        left_panel.setMinimumWidth(270)
         splitter.setCollapsible(0, False)
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 3)
-        splitter.setSizes([360, 1020])
+        splitter.setSizes([320, 1060])
 
         nav_layout = QHBoxLayout()
-        self.paint_back_button = QPushButton("Back")
+        self.paint_back_button = QPushButton("← Setup")
         self.paint_back_button.clicked.connect(lambda: self._set_workflow_step(0))
         nav_layout.addWidget(self.paint_back_button)
         nav_layout.addStretch(1)
-        self.paint_next_button = QPushButton("Next")
+        self.paint_next_button = QPushButton("→ Generate")
         self.paint_next_button.clicked.connect(self._go_to_generate_step)
         nav_layout.addWidget(self.paint_next_button)
         layout.addLayout(nav_layout)
@@ -601,34 +665,20 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
 
-        intro = QLabel(
-            "Ajusta los parámetros solo para las capas pintadas y genera el mapa. Las capas no pintadas no aparecen aquí."
-        )
-        intro.setWordWrap(True)
-        layout.addWidget(intro)
-
-        top_layout = QHBoxLayout()
-        top_layout.addWidget(QLabel("Backend:"))
-        self.backend_combo = QComboBox()
-        self.backend_combo.currentIndexChanged.connect(self._on_backend_changed)
-        top_layout.addWidget(self.backend_combo)
-        top_layout.addStretch(1)
-        layout.addLayout(top_layout)
-
         body_splitter = QSplitter()
         layout.addWidget(body_splitter, stretch=1)
 
         left_panel = QWidget()
         left_layout = QVBoxLayout(left_panel)
         left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.setSpacing(6)
-        left_layout.addWidget(QLabel("Capas pintadas"))
+        left_layout.setSpacing(8)
+        left_layout.addWidget(QLabel("Painted Layers"))
 
         self.painted_layers_list = QListWidget()
         self.painted_layers_list.currentItemChanged.connect(self._on_parameter_layer_changed)
         left_layout.addWidget(self.painted_layers_list, stretch=1)
 
-        self.painted_layers_summary = QLabel("Sin capas pintadas todavía.")
+        self.painted_layers_summary = QLabel("No painted layers yet.")
         self.painted_layers_summary.setWordWrap(True)
         left_layout.addWidget(self.painted_layers_summary)
         body_splitter.addWidget(left_panel)
@@ -636,16 +686,16 @@ class MainWindow(QMainWindow):
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(0, 0, 0, 0)
-        right_layout.setSpacing(8)
+        right_layout.setSpacing(10)
 
-        self.parameter_layer_label = QLabel("Capa: ninguna")
+        self.parameter_layer_label = QLabel("Layer: none")
         right_layout.addWidget(self.parameter_layer_label)
 
         form_layout = QFormLayout()
 
-        self.param_enabled_check = QCheckBox("Generar esta capa")
+        self.param_enabled_check = QCheckBox("Generate this layer")
         self.param_enabled_check.toggled.connect(self._apply_parameter_form)
-        form_layout.addRow("Habilitada", self.param_enabled_check)
+        form_layout.addRow("Enabled", self.param_enabled_check)
 
         self.param_density_spin = QDoubleSpinBox()
         self.param_density_spin.setRange(0.0, 100000.0)
@@ -653,7 +703,7 @@ class MainWindow(QMainWindow):
         self.param_density_spin.valueChanged.connect(self._apply_parameter_form)
         form_layout.addRow("Density", self.param_density_spin)
 
-        self.param_allow_overlap_check = QCheckBox("Permitir solape")
+        self.param_allow_overlap_check = QCheckBox("Allow overlap")
         self.param_allow_overlap_check.toggled.connect(self._apply_parameter_form)
         form_layout.addRow("Allow overlap", self.param_allow_overlap_check)
 
@@ -693,22 +743,19 @@ class MainWindow(QMainWindow):
 
         right_layout.addLayout(form_layout)
 
-        self.painted_layers_table = QTableWidget(0, 4)
-        self.painted_layers_table.setHorizontalHeaderLabels(["Layer", "Density", "Overlap", "Min dist"])
-        self.painted_layers_table.verticalHeader().setVisible(False)
-        self.painted_layers_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self.painted_layers_table.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
-        right_layout.addWidget(self.painted_layers_table, stretch=1)
-
         body_splitter.addWidget(right_panel)
-        body_splitter.setSizes([300, 700])
+        body_splitter.setSizes([260, 740])
 
         nav_layout = QHBoxLayout()
-        self.generate_back_button = QPushButton("Back")
+        self.generate_back_button = QPushButton("← Paint")
         self.generate_back_button.clicked.connect(lambda: self._set_workflow_step(1))
         nav_layout.addWidget(self.generate_back_button)
         nav_layout.addStretch(1)
-        self.generate_button = QPushButton("Generate")
+        self.validate_button = QPushButton("🔍 Validate")
+        self.validate_button.clicked.connect(self._validate_pipeline)
+        nav_layout.addWidget(self.validate_button)
+        self.generate_button = QPushButton("▶ Generate")
+        self.generate_button.setProperty("accent", True)
         self.generate_button.clicked.connect(self._generate_pipeline)
         nav_layout.addWidget(self.generate_button)
         layout.addLayout(nav_layout)
@@ -742,32 +789,50 @@ class MainWindow(QMainWindow):
     def _set_workflow_step(self, index: int) -> None:
         index = max(0, min(2, index))
         self.workflow_stack.setCurrentIndex(index)
-        titles = {
-            0: "Paso 1 de 3: Selección y configuración",
-            1: "Paso 2 de 3: Pintado por colección",
-            2: "Paso 3 de 3: Parámetros y generación",
-        }
-        self.step_title_label.setText(titles.get(index, "Workflow"))
+        self._stepper_bar.set_active_step(index)
+        for step_index in range(3):
+            self._stepper_bar.set_step_completed(step_index, step_index < index)
+
+    def _on_stepper_clicked(self, index: int) -> None:
+        current = self.workflow_stack.currentIndex()
+        if index <= current:
+            self._set_workflow_step(index)
+            return
+        if index == 1:
+            self._go_to_paint_step()
+            return
+        if index == 2:
+            self._go_to_generate_step()
+            return
 
     def _go_to_paint_step(self) -> None:
         if not self._project_state.source_blend.strip():
-            QMessageBox.information(self, "Falta .blend", "Selecciona primero un archivo .blend.")
+            QMessageBox.information(self, "Missing .blend", "Select a .blend file first.")
             return
         if not self._project_state.blender_executable.strip():
-            QMessageBox.information(self, "Falta Blender", "Configura primero el ejecutable de Blender.")
+            QMessageBox.information(self, "Missing Blender", "Configure the Blender executable first.")
             return
         if not self._project_state.collection_tree:
-            QMessageBox.information(self, "Falta inspección", "Espera a que termine la inspección del .blend.")
+            QMessageBox.information(self, "Inspection Required", "Wait until the .blend inspection finishes.")
             return
         self._set_workflow_step(1)
 
     def _go_to_generate_step(self) -> None:
+        if not self._project_state.source_blend.strip():
+            QMessageBox.information(self, "Missing .blend", "Select a .blend file first.")
+            return
+        if not self._project_state.blender_executable.strip():
+            QMessageBox.information(self, "Missing Blender", "Configure the Blender executable first.")
+            return
+        if not self._project_state.collection_tree:
+            QMessageBox.information(self, "Inspection Required", "Wait until the .blend inspection finishes.")
+            return
         painted_layer_ids = self._layer_manager.painted_layer_ids()
         if not painted_layer_ids and not self._road_manager.has_roads():
             QMessageBox.information(
                 self,
-                "Sin contenido",
-                "Pinta al menos una capa o dibuja una road antes de continuar al paso de generación.",
+                "No Content",
+                "Paint at least one layer or draw a road before continuing to the Generate step.",
             )
             return
         self._refresh_painted_layers_ui()
@@ -789,16 +854,23 @@ class MainWindow(QMainWindow):
         painted_ids = self._layer_manager.painted_layer_ids()
         self.painted_layers_list.blockSignals(True)
         self.painted_layers_list.clear()
+        disabled_count = 0
         for layer_id in painted_ids:
-            item = QListWidgetItem(layer_id)
+            layer = self._layer_manager.get_layer(layer_id)
+            settings = layer.generation_settings if layer is not None else None
+            enabled = bool(settings.enabled) if settings is not None else False
+            if not enabled:
+                disabled_count += 1
+            density_text = f"density: {settings.density:.3f}" if settings is not None else "density: -"
+            prefix = "✓" if enabled else "✗"
+            item = QListWidgetItem(f"{prefix} {layer_id}    {density_text}")
             item.setData(Qt.ItemDataRole.UserRole, layer_id)
             self.painted_layers_list.addItem(item)
         self.painted_layers_list.blockSignals(False)
 
         self.painted_layers_summary.setText(
-            f"Capas pintadas: {len(painted_ids)}" if painted_ids else "Sin capas pintadas todavía."
+            (f"{len(painted_ids)} layers · {disabled_count} disabled" if painted_ids else "No painted layers yet.")
         )
-        self._refresh_painted_layers_table(painted_ids)
 
         if painted_ids:
             selected_id = self._parameter_layer_id if self._parameter_layer_id in painted_ids else painted_ids[0]
@@ -809,21 +881,6 @@ class MainWindow(QMainWindow):
                     break
         else:
             self._set_parameter_layer(None)
-
-    def _refresh_painted_layers_table(self, painted_ids: list[str]) -> None:
-        self.painted_layers_table.setRowCount(len(painted_ids))
-        for row, layer_id in enumerate(painted_ids):
-            layer = self._layer_manager.get_layer(layer_id)
-            settings = layer.generation_settings if layer is not None else None
-            values = [
-                layer_id,
-                f"{settings.density:.3f}" if settings is not None else "-",
-                "yes" if settings and settings.allow_overlap else "no",
-                f"{settings.min_distance:.3f}" if settings is not None else "-",
-            ]
-            for column, value in enumerate(values):
-                self.painted_layers_table.setItem(row, column, QTableWidgetItem(value))
-        self.painted_layers_table.resizeColumnsToContents()
 
     def _on_parameter_layer_changed(self, current: QListWidgetItem | None, previous: QListWidgetItem | None) -> None:
         del previous
@@ -852,18 +909,18 @@ class MainWindow(QMainWindow):
             widget.setEnabled(enabled)
 
         if not enabled:
-            self.parameter_layer_label.setText("Capa: ninguna")
+            self.parameter_layer_label.setText("Layer: none")
             self._updating_parameter_form = False
             return
 
         layer = self._layer_manager.get_layer(layer_id)
         if layer is None:
-            self.parameter_layer_label.setText("Capa: ninguna")
+            self.parameter_layer_label.setText("Layer: none")
             self._updating_parameter_form = False
             return
 
         settings = layer.generation_settings
-        self.parameter_layer_label.setText(f"Capa: {layer_id}")
+        self.parameter_layer_label.setText(f"Layer: {layer_id}")
         self.param_enabled_check.setChecked(settings.enabled)
         self.param_density_spin.setValue(settings.density)
         self.param_allow_overlap_check.setChecked(settings.allow_overlap)
@@ -894,11 +951,11 @@ class MainWindow(QMainWindow):
         settings.priority = int(self.param_priority_spin.value())
         settings.validate()
         self._project_state.touch()
-        self._refresh_painted_layers_table(self._layer_manager.painted_layer_ids())
+        self._refresh_painted_layers_ui()
 
     def _new_project(self) -> None:
         if self._load_state.is_busy:
-            QMessageBox.information(self, "Inspección en curso", "Espera a que termine la inspección actual.")
+            QMessageBox.information(self, "Inspection In Progress", "Wait until the current inspection finishes.")
             return
 
         blender_exec = self._settings.get_blender_executable() or ""
@@ -909,16 +966,16 @@ class MainWindow(QMainWindow):
         self._pipeline_state.current_stage = "idle"
         self._rebuild_layer_manager(project_dir=None)
         self._apply_project_to_ui()
-        self._append_log("Proyecto nuevo creado.")
+        self._append_log("New project created.")
 
     def _open_project(self) -> None:
         if self._load_state.is_busy:
-            QMessageBox.information(self, "Inspección en curso", "Espera a que termine la inspección actual.")
+            QMessageBox.information(self, "Inspection In Progress", "Wait until the current inspection finishes.")
             return
 
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Abrir proyecto",
+            "Open Project",
             str(Path.home()),
             "Project JSON (*.json)",
         )
@@ -929,8 +986,8 @@ class MainWindow(QMainWindow):
         try:
             project_state = self._project_service.load_project(project_path)
         except ProjectServiceError as exc:
-            QMessageBox.critical(self, "Error al abrir proyecto", str(exc))
-            self._append_log(f"ERROR al abrir proyecto: {exc}")
+            QMessageBox.critical(self, "Error Opening Project", str(exc))
+            self._append_log(f"ERROR opening project: {exc}")
             return
 
         self._project_state = project_state
@@ -944,8 +1001,8 @@ class MainWindow(QMainWindow):
 
         self._rebuild_layer_manager(project_dir=project_path.parent)
         self._apply_project_to_ui()
-        self.statusBar().showMessage("Proyecto cargado.")
-        self._append_log(f"Proyecto abierto: {project_path}")
+        self.statusBar().showMessage("Project loaded.")
+        self._append_log(f"Project opened: {project_path}")
 
     def _save_project(self) -> None:
         if self._project_file_path is None:
@@ -957,7 +1014,7 @@ class MainWindow(QMainWindow):
         suggested = self._project_file_path or (Path.home() / "procedural_project.json")
         file_path, _ = QFileDialog.getSaveFileName(
             self,
-            "Guardar proyecto como",
+            "Save Project As",
             str(suggested),
             "Project JSON (*.json)",
         )
@@ -970,20 +1027,23 @@ class MainWindow(QMainWindow):
         self._persist_project(project_path)
 
     def _persist_project(self, project_path: Path) -> None:
-        self._terrain_tab.set_project_dir(str(project_path.parent))
+        current_step = self.workflow_stack.currentIndex()
+        if self._terrain_available:
+            self._terrain_tab.set_project_dir(str(project_path.parent))
         self._sync_project_runtime_data()
         try:
             self._project_state.layers = self._layer_manager.to_layer_states(project_path.parent)
             self._project_service.save_project(self._project_state, project_path)
         except (ProjectServiceError, RuntimeError) as exc:
-            QMessageBox.critical(self, "Error al guardar proyecto", str(exc))
-            self._append_log(f"ERROR al guardar proyecto: {exc}")
+            QMessageBox.critical(self, "Error Saving Project", str(exc))
+            self._append_log(f"ERROR saving project: {exc}")
             return
 
         self._project_file_path = project_path
         self._apply_project_to_ui()
-        self.statusBar().showMessage("Proyecto guardado.")
-        self._append_log(f"Proyecto guardado: {project_path}")
+        self._set_workflow_step(current_step)
+        self.statusBar().showMessage("Project saved.")
+        self._append_log(f"Project saved: {project_path}")
 
     def _configure_map(self) -> None:
         dialog = MapSettingsDialog(self._project_state.map_settings, self)
@@ -1003,7 +1063,7 @@ class MainWindow(QMainWindow):
         self.canvas_view.refresh_overlay()
         self._refresh_map_summary_label()
         self._append_log(
-            "Mapa configurado: "
+            "Map configured: "
             f"{self._project_state.map_settings.logical_width:.2f} x "
             f"{self._project_state.map_settings.logical_height:.2f} "
             f"{self._project_state.map_settings.logical_unit} | "
@@ -1014,7 +1074,7 @@ class MainWindow(QMainWindow):
     def _on_select_blend(self) -> None:
         file_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Seleccionar archivo .blend",
+            "Select .blend file",
             str(Path.home()),
             "Blender Files (*.blend)",
         )
@@ -1029,7 +1089,7 @@ class MainWindow(QMainWindow):
     def _on_configure_blender(self) -> None:
         blender_path, _ = QFileDialog.getOpenFileName(
             self,
-            "Seleccionar ejecutable de Blender",
+            "Select Blender executable",
             str(Path.home()),
             "All Files (*)",
         )
@@ -1040,7 +1100,7 @@ class MainWindow(QMainWindow):
         self._project_state.blender_executable = blender_path
         self._project_state.touch()
         self._refresh_blender_path_label()
-        self._append_log(f"Ruta de Blender guardada: {blender_path}")
+        self._append_log(f"Saved Blender path: {blender_path}")
 
     def _validate_pipeline(self) -> None:
         self._refresh_painted_layers_ui()
@@ -1053,22 +1113,22 @@ class MainWindow(QMainWindow):
     def _final_export(self) -> None:
         latest_output = self._project_state.latest_output
         if latest_output is None or not latest_output.result_path.strip():
-            QMessageBox.information(self, "Sin resultado", "Primero genera un resultado válido.")
+            QMessageBox.information(self, "No Result", "Generate a valid result first.")
             return
 
         backend_id = latest_output.backend_id or self._selected_backend_id()
         if not self._pipeline_service.supports_final_export(backend_id):
             QMessageBox.information(
                 self,
-                "Exportación final no disponible",
-                "El backend actual no soporta exportación final adicional.",
+                "Final Export Unavailable",
+                "The current backend does not support additional final export.",
             )
             return
 
         default_path = self.output_path_edit.text().strip() or str(Path.home() / "resultado_final")
         destination_path, _ = QFileDialog.getSaveFileName(
             self,
-            "Exportación final",
+            "Final Export",
             default_path,
             "All Files (*)",
         )
@@ -1084,7 +1144,7 @@ class MainWindow(QMainWindow):
     def _open_result(self) -> None:
         latest_output = self._project_state.latest_output
         if latest_output is None:
-            QMessageBox.information(self, "Sin resultado", "Todavía no hay resultados para abrir.")
+            QMessageBox.information(self, "No Result", "There is no result to open yet.")
             return
 
         candidate = (
@@ -1092,24 +1152,24 @@ class MainWindow(QMainWindow):
             or latest_output.result_path
         )
         if not candidate:
-            QMessageBox.information(self, "Sin resultado", "Todavía no hay una ruta de resultado disponible.")
+            QMessageBox.information(self, "No Result", "There is no result path available yet.")
             return
 
         target = Path(candidate).expanduser()
         if not target.exists():
-            QMessageBox.warning(self, "Resultado no encontrado", f"No existe la ruta: {target}")
+            QMessageBox.warning(self, "Result Not Found", f"The path does not exist: {target}")
             return
 
         try:
             self._pipeline_service.open_result_in_blender(target)
         except GenerationPipelineError as exc:
-            QMessageBox.warning(self, "No se pudo abrir", str(exc))
+            QMessageBox.warning(self, "Could Not Open", str(exc))
 
     def _browse_output_path(self) -> None:
         current = self.output_path_edit.text().strip() or str(Path.home() / "result.blend")
         output_path, _ = QFileDialog.getSaveFileName(
             self,
-            "Seleccionar ruta de salida",
+            "Select output path",
             current,
             "Blender Files (*.blend);;All Files (*)",
         )
@@ -1160,10 +1220,10 @@ class MainWindow(QMainWindow):
         destination_path: Path | None = None,
     ) -> None:
         if self._load_state.is_busy:
-            QMessageBox.information(self, "Inspección en curso", "Espera a que termine la inspección actual.")
+            QMessageBox.information(self, "Inspection In Progress", "Wait until the current inspection finishes.")
             return
         if self._pipeline_state.is_busy:
-            QMessageBox.information(self, "Pipeline en curso", "Espera a que termine el pipeline actual.")
+            QMessageBox.information(self, "Pipeline In Progress", "Wait until the current pipeline finishes.")
             return
 
         self._sync_project_runtime_data()
@@ -1178,8 +1238,8 @@ class MainWindow(QMainWindow):
         if not current_layers and not current_roads:
             QMessageBox.information(
                 self,
-                "Sin contenido",
-                "Pinta al menos una capa o dibuja una road antes de validar o generar.",
+                "No Content",
+                "Paint at least one layer or draw a road before validating or generating.",
             )
             return
         self._project_state.layers = current_layers
@@ -1224,7 +1284,7 @@ class MainWindow(QMainWindow):
         self._pipeline_thread = thread
         self._pipeline_worker = worker
         self._set_pipeline_running(True, "exporting")
-        self._append_log(f"Pipeline iniciado ({operation}) con backend '{backend_id}'.")
+        self._append_log(f"Pipeline started ({operation}) with backend '{backend_id}'.")
         thread.start()
 
     def _build_pipeline_package_dir(self) -> Path:
@@ -1243,11 +1303,11 @@ class MainWindow(QMainWindow):
 
     def _start_inspection(self, blend_file: Path) -> None:
         if self._load_state.is_busy:
-            self._append_log("Ya hay una inspección en curso. Espera a que finalice.")
+            self._append_log("An inspection is already running. Wait until it finishes.")
             return
 
         self._set_loading_state(True)
-        self._append_log(f"Iniciando inspección de {blend_file}")
+        self._append_log(f"Starting inspection of {blend_file}")
 
         thread = QThread(self)
         worker = InspectionWorker(self._inspection_service, blend_file)
@@ -1272,12 +1332,12 @@ class MainWindow(QMainWindow):
         self._set_loading_state(False)
         self._active_thread = None
         self._active_worker = None
-        if self.statusBar().currentMessage() == "Inspeccionando .blend...":
-            self.statusBar().showMessage("Listo.")
+        if self.statusBar().currentMessage() == "Inspecting .blend...":
+            self.statusBar().showMessage("Ready.")
 
     def _on_inspection_success(self, result: BlendInspectionResult) -> None:
         self._append_log(
-            f"Inspección completada: {result.total_collections} collections encontradas."
+            f"Inspection completed: {result.total_collections} collections found."
         )
         for warning in result.warnings:
             self._append_log(f"Warning: {warning}")
@@ -1294,18 +1354,18 @@ class MainWindow(QMainWindow):
         self._refresh_blend_label()
 
         if not result.roots:
-            self.statusBar().showMessage("No se encontraron collections útiles en el .blend.")
-            self._append_log("No se detectaron collections raíz para crear capas.")
+            self.statusBar().showMessage("No useful collections were found in the .blend.")
+            self._append_log("No root collections were detected for layer creation.")
             return
 
         missing_roots = result.missing_expected_roots(EXPECTED_ROOTS)
         if missing_roots:
             self._append_log(
-                "Collections principales esperadas no encontradas: "
+                "Expected top-level collections not found: "
                 + ", ".join(sorted(missing_roots))
             )
         else:
-            self._append_log("Se encontraron collections principales esperadas: vegetation, building.")
+            self._append_log("Expected top-level collections found: vegetation, building.")
 
         if self._active_layer_id is None:
             self._select_first_layer()
@@ -1314,27 +1374,27 @@ class MainWindow(QMainWindow):
             suggested_plane = result.base_plane_candidates[0]
             self._project_state.map_settings.base_plane_object = suggested_plane
             self._refresh_map_summary_label()
-            self._append_log(f"Plano base sugerido: {suggested_plane}")
+            self._append_log(f"Suggested base plane: {suggested_plane}")
 
-        self.statusBar().showMessage("Inspección finalizada correctamente.")
+        self.statusBar().showMessage("Inspection finished successfully.")
 
     def _on_inspection_failed(self, message: str) -> None:
-        self.statusBar().showMessage("Error durante la inspección del archivo.")
+        self.statusBar().showMessage("Error during file inspection.")
         self._append_log(f"ERROR: {message}")
-        QMessageBox.critical(self, "Error al inspeccionar .blend", message)
+        QMessageBox.critical(self, "Error Inspecting .blend", message)
 
     @Slot(str)
     def _on_pipeline_state_changed(self, state: str) -> None:
         self._pipeline_state.current_stage = state
         self._refresh_pipeline_state_label()
         status_map = {
-            "exporting": "Exportando...",
-            "validating": "Validando...",
-            "generating": "Generando...",
-            "finalizing": "Exportando final...",
-            "validated": "Validación completada.",
-            "completed": "Generación completada.",
-            "failed": "Pipeline falló.",
+            "exporting": "Exporting...",
+            "validating": "Validating...",
+            "generating": "Generating...",
+            "finalizing": "Final export...",
+            "validated": "Validation completed.",
+            "completed": "Generation completed.",
+            "failed": "Pipeline failed.",
         }
         message = status_map.get(state)
         if message:
@@ -1347,9 +1407,9 @@ class MainWindow(QMainWindow):
         self._refresh_latest_output_label()
         self._refresh_pipeline_actions()
         if latest_output.status == "validated":
-            self._append_log("Pipeline validado correctamente.")
+            self._append_log("Pipeline validated successfully.")
         else:
-            self._append_log("Pipeline completado correctamente.")
+            self._append_log("Pipeline completed successfully.")
 
     @Slot(str, object)
     def _on_pipeline_failed(self, message: str, latest_output: LatestOutputInfo) -> None:
@@ -1358,21 +1418,21 @@ class MainWindow(QMainWindow):
         self._refresh_latest_output_label()
         self._refresh_pipeline_actions()
         self._append_log(f"ERROR: {message}")
-        QMessageBox.critical(self, "Error de pipeline", message)
+        QMessageBox.critical(self, "Pipeline Error", message)
 
     def _on_pipeline_thread_finished(self) -> None:
         self._set_pipeline_running(False, self._pipeline_state.current_stage)
         self._pipeline_thread = None
         self._pipeline_worker = None
         if self.statusBar().currentMessage() in {
-                "Exportando...",
-                "Validando...",
-                "Generando...",
-                "Exportando final...",
-                "Validación completada.",
-                "Generación completada.",
+                "Exporting...",
+                "Validating...",
+                "Generating...",
+                "Final export...",
+                "Validation completed.",
+                "Generation completed.",
         }:
-            self.statusBar().showMessage("Listo.")
+            self.statusBar().showMessage("Ready.")
 
     def _set_pipeline_running(self, is_busy: bool, stage: str) -> None:
         self._pipeline_state.is_busy = is_busy
@@ -1382,6 +1442,13 @@ class MainWindow(QMainWindow):
         self.browse_output_button.setEnabled(not is_busy)
         self.action_validate_pipeline.setEnabled(not is_busy)
         self.action_generate.setEnabled(not is_busy)
+        self._stepper_bar.setEnabled(not is_busy and not self._load_state.is_busy)
+        self.setup_next_button.setEnabled(not is_busy)
+        self.paint_back_button.setEnabled(not is_busy)
+        self.paint_next_button.setEnabled(not is_busy)
+        self.generate_back_button.setEnabled(not is_busy)
+        self.validate_button.setEnabled(not is_busy)
+        self.generate_button.setEnabled(not is_busy)
         self._refresh_pipeline_actions()
         self._refresh_pipeline_state_label()
 
@@ -1394,76 +1461,42 @@ class MainWindow(QMainWindow):
         self.action_configure_map.setEnabled(not is_busy)
         self.action_validate_pipeline.setEnabled(not is_busy and not self._pipeline_state.is_busy)
         self.action_generate.setEnabled(not is_busy and not self._pipeline_state.is_busy)
+        self._stepper_bar.setEnabled(not is_busy and not self._pipeline_state.is_busy)
+        self.setup_next_button.setEnabled(not is_busy)
+        self.paint_back_button.setEnabled(not is_busy)
+        self.paint_next_button.setEnabled(not is_busy)
+        self.generate_back_button.setEnabled(not is_busy)
+        self.validate_button.setEnabled(not is_busy and not self._pipeline_state.is_busy)
+        self.generate_button.setEnabled(not is_busy and not self._pipeline_state.is_busy)
         self._refresh_pipeline_actions()
         if is_busy:
-            self.statusBar().showMessage("Inspeccionando .blend...")
+            self.statusBar().showMessage("Inspecting .blend...")
 
     def _refresh_project_label(self) -> None:
-        if self._project_file_path:
-            self.project_label.setText(f"Proyecto: {self._project_file_path}")
-        else:
-            self.project_label.setText("Proyecto: sin guardar")
+        self._refresh_header_bar()
 
     def _refresh_blend_label(self) -> None:
-        if self._project_state.source_blend:
-            self.blend_file_label.setText(f"Blend fuente: {self._project_state.source_blend}")
-        else:
-            self.blend_file_label.setText("Blend fuente: ninguno")
+        self.setup_blend_info_label.setText(self._project_state.source_blend or "No .blend selected")
+        self._refresh_header_bar()
 
     def _refresh_blender_path_label(self) -> None:
         blender_path, source = self._settings.get_blender_path_and_source()
+        label_text = "Blender not configured"
         if blender_path and source == "settings":
-            self.blender_path_label.setText(f"Blender: {blender_path} (configurado en la app/proyecto)")
-            return
-        if blender_path and source == "env":
-            self.blender_path_label.setText(f"Blender: {blender_path} (BLENDER_EXECUTABLE)")
-            return
-        self.blender_path_label.setText(
-            "Blender: no configurado. Usa 'Configurar Blender' o define BLENDER_EXECUTABLE."
-        )
+            label_text = f"{blender_path} (app/project)"
+        elif blender_path and source == "env":
+            label_text = f"{blender_path} (BLENDER_EXECUTABLE)"
+        self.setup_blender_info_label.setText(label_text)
+        self._refresh_header_bar()
 
     def _refresh_map_summary_label(self) -> None:
-        settings = self._project_state.map_settings
-        self.map_summary_label.setText(
-            "Mapa: "
-            f"{settings.logical_width:.2f} x {settings.logical_height:.2f} {settings.logical_unit} | "
-            f"máscaras {settings.mask_width}x{settings.mask_height} | "
-            f"terrain: {settings.terrain_material_id}"
-        )
+        self._refresh_header_bar()
 
     def _refresh_pipeline_state_label(self) -> None:
-        labels = {
-            "idle": "inactivo",
-            "exporting": "exportando",
-            "validating": "validando",
-            "generating": "generando",
-            "finalizing": "exportando final",
-            "validated": "validado",
-            "completed": "completado",
-            "failed": "fallido",
-        }
-        state = labels.get(self._pipeline_state.current_stage, self._pipeline_state.current_stage)
-        self.pipeline_state_label.setText(f"Pipeline: {state}")
+        self._refresh_header_bar()
 
     def _refresh_latest_output_label(self) -> None:
-        latest_output = self._project_state.latest_output
-        if latest_output is None:
-            self.latest_output_label.setText("Último resultado: ninguno")
-            return
-
-        parts = [f"estado={latest_output.status or '-'}"]
-        if latest_output.backend_id:
-            parts.append(f"backend={latest_output.backend_id}")
-        result_path = latest_output.final_output_path or latest_output.result_path or latest_output.export_manifest_path
-        if result_path:
-            parts.append(result_path)
-        if latest_output.completed_at:
-            parts.append(latest_output.completed_at)
-        if latest_output.used_layer_ids:
-            parts.append(f"capas={len(latest_output.used_layer_ids)}")
-        if latest_output.error_message:
-            parts.append(f"error={latest_output.error_message}")
-        self.latest_output_label.setText("Último resultado: " + " | ".join(parts))
+        self._refresh_header_bar()
 
     def _refresh_pipeline_actions(self) -> None:
         latest_output = self._project_state.latest_output
@@ -1567,7 +1600,7 @@ class MainWindow(QMainWindow):
         road_root.setFont(0, root_font)
         self.layer_tree.addTopLevelItem(road_root)
 
-        tool_item = QTreeWidgetItem(["Nueva road"])
+        tool_item = QTreeWidgetItem(["New Road"])
         tool_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
         tool_item.setData(0, Qt.ItemDataRole.UserRole, {"kind": "road_tool", "id": ROAD_TOOL_TREE_ID})
         road_root.addChild(tool_item)
@@ -1637,13 +1670,9 @@ class MainWindow(QMainWindow):
         self.canvas_view.set_active_layer(layer_id)
         if layer_id is None:
             if self._editing_target == "road":
-                self.active_layer_label.setText("Herramienta activa: Road")
-                self.statusBar().showMessage("Herramienta activa: Road")
-            else:
-                self.active_layer_label.setText("Capa activa: ninguna")
+                self.statusBar().showMessage("Active Tool: Road")
             return
-        self.active_layer_label.setText(f"Capa activa: {layer_id}")
-        self.statusBar().showMessage(f"Capa activa: {layer_id}")
+        self.statusBar().showMessage(f"Active Layer: {layer_id}")
 
     def _on_layer_item_changed(self, item: QTreeWidgetItem, column: int) -> None:
         if self._updating_layer_tree or column != 0:
@@ -1666,12 +1695,12 @@ class MainWindow(QMainWindow):
 
     def _on_brush_size_changed(self, value: int) -> None:
         self._brush_tool.set_radius(value)
-        self.brush_size_label.setText(f"Tamaño pincel: {self._brush_tool.radius_px}px")
+        self.brush_size_label.setText(f"Size  {self._brush_tool.radius_px}px")
 
     def _on_brush_intensity_changed(self, value: int) -> None:
         intensity = value / 100.0
         self._brush_tool.set_intensity(intensity)
-        self.brush_intensity_label.setText(f"Intensidad: {value}%")
+        self.brush_intensity_label.setText(f"Intensity  {value}%")
 
     def _set_brush_mode(self, mode: str) -> None:
         if mode == "paint":
@@ -1681,6 +1710,7 @@ class MainWindow(QMainWindow):
             self.erase_mode_button.setChecked(False)
             self._brush_tool.set_mode("paint")
             self.canvas_view.set_edit_mode("paint")
+            self.road_group.setVisible(False)
             return
 
         if mode == "road":
@@ -1688,6 +1718,7 @@ class MainWindow(QMainWindow):
             self.paint_mode_button.setChecked(False)
             self.erase_mode_button.setChecked(False)
             self.canvas_view.set_edit_mode("road")
+            self.road_group.setVisible(True)
             return
 
         self._editing_target = "layer"
@@ -1696,9 +1727,10 @@ class MainWindow(QMainWindow):
         self.erase_mode_button.setChecked(True)
         self._brush_tool.set_mode("erase")
         self.canvas_view.set_edit_mode("erase")
+        self.road_group.setVisible(False)
 
     def _on_road_width_changed(self, value: int) -> None:
-        self.road_width_label.setText(f"Ancho road: {value}")
+        self.road_width_label.setText(f"Width  {value}")
         self.canvas_view.set_road_width(float(value))
 
     def _on_road_profile_changed(self, _index: int) -> None:
@@ -1707,22 +1739,22 @@ class MainWindow(QMainWindow):
     def _remove_last_road(self) -> None:
         road = self._road_manager.remove_last_road()
         if road is None:
-            QMessageBox.information(self, "Sin roads", "No hay roads para eliminar.")
+            QMessageBox.information(self, "No Roads", "There are no roads to delete.")
             return
         self.canvas_view.refresh_overlay()
         self._refresh_layer_tree()
         self._project_state.touch()
-        self._append_log(f"Road eliminada: {road.road_id}")
+        self._append_log(f"Road deleted: {road.road_id}")
 
     def _clear_active_layer(self) -> None:
         if not self._active_layer_id:
-            QMessageBox.information(self, "Sin capa activa", "Selecciona una capa para limpiarla.")
+            QMessageBox.information(self, "No Active Layer", "Select a layer to clear.")
             return
         self._layer_manager.clear_layer(self._active_layer_id)
         self.canvas_view.refresh_overlay()
         self._refresh_painted_layers_ui()
         self._project_state.touch()
-        self._append_log(f"Capa limpiada: {self._active_layer_id}")
+        self._append_log(f"Layer cleared: {self._active_layer_id}")
 
     def _on_mask_modified(self) -> None:
         self._project_state.touch()
@@ -1815,7 +1847,7 @@ class MainWindow(QMainWindow):
         self._refresh_layer_tree()
         self._refresh_painted_layers_ui()
         self._set_workflow_step(0)
-        project_title = self._project_state.project_name or "Proyecto"
+        project_title = self._project_state.project_name or "Project"
         self.setWindowTitle(f"Procedural Map Designer - {project_title}")
 
     def _load_terrain_material_catalog(self) -> None:
@@ -1834,14 +1866,80 @@ class MainWindow(QMainWindow):
             self.terrain_material_combo.setEnabled(True)
         self.terrain_material_combo.blockSignals(False)
 
+    def _apply_stylesheet(self, path: Path) -> None:
+        if path.exists() and QApplication.instance() is not None:
+            QApplication.instance().setStyleSheet(path.read_text(encoding="utf-8"))
+
+    def _load_svg_pixmap(self, svg_path: Path, width: int, height: int) -> QPixmap:
+        renderer = QSvgRenderer(str(svg_path))
+        pixmap = QPixmap(width, height)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        renderer.render(painter)
+        painter.end()
+        return pixmap
+
+    def _load_svg_icon(self, svg_path: Path, size: int) -> QIcon:
+        return QIcon(self._load_svg_pixmap(svg_path, size, size))
+
+    def _refresh_header_bar(self) -> None:
+        project_name = self._project_file_path.name if self._project_file_path else "Unsaved project"
+        self._header_project_name.setText(project_name)
+        settings = self._project_state.map_settings
+        self._header_map_info.setText(
+            f"{settings.logical_width:.0f}×{settings.logical_height:.0f}{settings.logical_unit} · {settings.mask_width}px · {settings.terrain_material_id}"
+        )
+        labels = {
+            "idle": "Idle",
+            "exporting": "Exporting",
+            "validating": "Validating",
+            "generating": "Generating",
+            "finalizing": "Finalizing",
+            "validated": "Validated",
+            "completed": "Success",
+            "failed": "Failed",
+        }
+        pill_styles = {
+            "idle": "background:#374151; color:#9ca3af; border-radius:10px; padding:2px 8px;",
+            "exporting": "background:#1d4ed8; color:#bfdbfe; border-radius:10px; padding:2px 8px;",
+            "validating": "background:#1d4ed8; color:#bfdbfe; border-radius:10px; padding:2px 8px;",
+            "generating": "background:#1d4ed8; color:#bfdbfe; border-radius:10px; padding:2px 8px;",
+            "finalizing": "background:#1d4ed8; color:#bfdbfe; border-radius:10px; padding:2px 8px;",
+            "validated": "background:#14532d; color:#86efac; border-radius:10px; padding:2px 8px;",
+            "completed": "background:#14532d; color:#86efac; border-radius:10px; padding:2px 8px;",
+            "failed": "background:#7f1d1d; color:#fca5a5; border-radius:10px; padding:2px 8px;",
+        }
+        stage = self._pipeline_state.current_stage
+        self._header_pipeline_pill.setText(labels.get(stage, stage))
+        self._header_pipeline_pill.setStyleSheet(pill_styles.get(stage, pill_styles["idle"]))
+        latest_output = self._project_state.latest_output
+        if latest_output is None:
+            output_text = "No output yet"
+        else:
+            result_path = latest_output.final_output_path or latest_output.result_path or latest_output.export_manifest_path
+            output_text = result_path or latest_output.status or "No output yet"
+        self._header_output_chip.setText(output_text)
+
     @Slot(str)
     def _append_log(self, message: str) -> None:
         timestamp = datetime.now().strftime("%H:%M:%S")
-        self.log_panel.appendPlainText(f"[{timestamp}] {message}")
+        if "ERROR" in message:
+            prefix_color = "#ef4444"
+        elif "Warning" in message or "WARNING" in message:
+            prefix_color = "#f59e0b"
+        elif "completed" in message.lower() or "success" in message.lower() or "validated" in message.lower():
+            prefix_color = "#22c55e"
+        else:
+            prefix_color = "#9ca3af"
+        line = (
+            f'<span style="color:{prefix_color}">[{timestamp}]</span> '
+            f'<span style="color:#d1fae5">{html.escape(message)}</span>'
+        )
+        self.log_panel.append(line)
 
     def closeEvent(self, event: QCloseEvent) -> None:
         if self._active_thread and self._active_thread.isRunning():
-            self._append_log("Cerrando inspección en curso antes de salir...")
+            self._append_log("Closing running inspection before exit...")
             self._active_thread.quit()
             self._active_thread.wait(3000)
         super().closeEvent(event)

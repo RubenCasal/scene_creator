@@ -1,0 +1,134 @@
+{
+  "schema_version": 3,
+  "project_id": "013b113b-06e4-4085-bf12-b00c9156d2e1",
+  "source_blend": "/home/ruben/Desktop/mapas_generados/objetos.blend",
+  "blender_executable": "/home/ruben/blender-5.1.0-linux-x64/blender",
+  "output_blend": "/home/ruben/Desktop/scene_generator/main) ✗ conda deactivate\r\n(.venv) ➜  scene_generator git:(main) ✗ ./main.py \r\nTraceback (most recent call last):\r\n  File \"/home/ruben/Desktop/scene_generator/src/proc_map_designer/ui/main_window.py\", line 941, in _apply_parameter_form\r\n    settings.validate()\r\n    ^^^^^^^^^^^^^^^^^\r\nAttributeError: 'LayerGenerationSettings' object has no attribute 'validate'\r\n^C^CTraceback (most recent call last):\r\n  File \"/home/ruben/Desktop/scene_generator/src/proc_map_designer/ui/main_window.py\", line 1912, in _append_log\r\n    @Slot(str)\r\n    \r\nKeyboardInterrupt\r\n(.venv) ➜  scene_generator git:(main",
+  "map": {
+    "width": 200.0,
+    "height": 200.0,
+    "unit": "m",
+    "mask_resolution": {
+      "width": 1024,
+      "height": 1024
+    },
+    "base_plane_object": "Object_2",
+    "terrain_material_id": "terrain_rocky_ground",
+    "terrain": {
+      "enabled": true,
+      "max_height": 10.0,
+      "export_subdivision": 7,
+      "heightfield_resolution": 512,
+      "heightfield_path": "terrain/heightfield.png",
+      "noise_enabled": false,
+      "noise_scale": 1.0,
+      "noise_strength": 0.25,
+      "noise_octaves": 4,
+      "noise_roughness": 0.5,
+      "noise_seed": 0
+    }
+  },
+  "layers": [
+    {
+      "category": "Vegetation",
+      "name": "Vegetation/Tree",
+      "blender_collection": "Vegetation/Tree",
+      "enabled": true,
+      "mask_path": "masks/000_Vegetation_Tree.png",
+      "settings": {
+        "density": 10.0,
+        "min_distance": 0.0,
+        "allow_overlap": true,
+        "scale_min": 1.0,
+        "scale_max": 1.0,
+        "rotation_random_z": 180.0,
+        "seed": 0,
+        "priority": 0
+      }
+    }
+  ],
+  "roads": [
+    {
+      "road_id": "road/001",
+      "name": "road/001",
+      "visible": true,
+      "closed": false,
+      "points": [
+        {
+          "x": -82.27848101677216,
+          "y": 1.2658227848734178
+        },
+        {
+          "x": -81.54008439226267,
+          "y": 0.5274261603639241
+        },
+        {
+          "x": -80.06329114324367,
+          "y": -0.9493670886550634
+        },
+        {
+          "x": -76.16033755655064,
+          "y": -11.39240506386076
+        },
+        {
+          "x": -69.83122363218355,
+          "y": -30.801687765253167
+        },
+        {
+          "x": -62.44725738708862,
+          "y": -46.729957808243675
+        },
+        {
+          "x": -54.00843882126583,
+          "y": -59.177215192832286
+        },
+        {
+          "x": -45.464135023370254,
+          "y": -69.72573840011077
+        },
+        {
+          "x": -36.8143459934019,
+          "y": -78.37552743007913
+        },
+        {
+          "x": -30.90717299732595,
+          "y": -83.64978903371836
+        },
+        {
+          "x": -27.742616035142404,
+          "y": -85.54852321102848
+        },
+        {
+          "x": -22.257383967357594,
+          "y": -87.23628692419304
+        },
+        {
+          "x": -14.45147679397152,
+          "y": -88.71308017321203
+        },
+        {
+          "x": -9.17721519033228,
+          "y": -88.60759494113925
+        },
+        {
+          "x": -6.434599156439874,
+          "y": -86.91983122797468
+        },
+        {
+          "x": -5.063291139493671,
+          "y": -86.07594937139241
+        }
+      ],
+      "style": {
+        "width": 24.0,
+        "resolution": 24,
+        "profile": "single"
+      },
+      "generator": {
+        "seed": 3870419931,
+        "geometry_nodes_asset_path": "assets/roads/geometry_nodes_procedural_road.json",
+        "material_library_blend_path": "/home/ruben/Desktop/scene_generator/blender_defaults/road.blend"
+      }
+    }
+  ]
+}

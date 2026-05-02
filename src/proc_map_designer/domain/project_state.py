@@ -188,6 +188,9 @@ class LayerGenerationSettings:
             )
         self.align_to_surface_normal = align_to_surface_normal
 
+    def validate(self) -> None:
+        self.__post_init__()
+
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> "LayerGenerationSettings":
         mapping = require_mapping(data, "layers[].generation_settings")
