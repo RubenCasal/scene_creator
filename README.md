@@ -4,13 +4,13 @@
 </p>
 
 
-<div align="center" style="line-height: 1;">
+
 ![Python](https://img.shields.io/badge/Python-3.13+-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![PySide6](https://img.shields.io/badge/PySide6-Desktop%20GUI-41CD52?style=for-the-badge&logo=qt&logoColor=white)
 ![Blender](https://img.shields.io/badge/Blender-5.x-F5792A?style=for-the-badge&logo=blender&logoColor=white)
 ![Geometry Nodes](https://img.shields.io/badge/Geometry%20Nodes-Procedural-FFB000?style=for-the-badge)
 
-</div>
+
 
 
 ---
