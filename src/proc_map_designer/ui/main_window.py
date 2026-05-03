@@ -5,7 +5,7 @@ from datetime import datetime
 import html
 from pathlib import Path
 
-from PySide6.QtCore import QObject, Qt, QThread, Signal, Slot
+from PySide6.QtCore import QObject, QRectF, Qt, QThread, Signal, Slot
 from PySide6.QtGui import QAction, QCloseEvent, QColor, QFont, QIcon, QPainter, QPixmap
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import (
@@ -298,10 +298,6 @@ class MainWindow(QMainWindow):
         toolbar = QToolBar("Project", self)
         toolbar.setMovable(False)
         toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
-        name_logo = QLabel()
-        name_logo.setPixmap(self._load_svg_pixmap(Path(__file__).resolve().parents[3] / "logo" / "name_logo_white.svg", 80, 24))
-        toolbar.addWidget(name_logo)
-        toolbar.addSeparator()
         self.action_new_project.setIcon(load_svg_icon("new"))
         self.action_open_project.setIcon(load_svg_icon("open"))
         self.action_save_project.setIcon(load_svg_icon("save"))
@@ -345,19 +341,40 @@ class MainWindow(QMainWindow):
         root_layout.setSpacing(10)
 
         self._header_bar = QWidget()
-        self._header_bar.setFixedHeight(42)
+        self._header_bar.setFixedHeight(60)
         header_layout = QHBoxLayout(self._header_bar)
-        header_layout.setContentsMargins(8, 0, 8, 0)
-        header_layout.setSpacing(8)
-        self._header_logo = QLabel()
-        self._header_logo.setPixmap(self._load_svg_pixmap(Path(__file__).resolve().parents[3] / "logo" / "icon_logo_white.svg", 24, 24))
-        header_layout.addWidget(self._header_logo)
+        header_layout.setContentsMargins(4, 0, 10, 0)
+        header_layout.setSpacing(4)
+        logo_layout = QHBoxLayout()
+        logo_layout.setContentsMargins(0, 0, 10, 0)
+        logo_layout.setSpacing(10)
+        self._header_icon_logo = QLabel()
+        self._header_icon_logo.setPixmap(
+            self._load_svg_pixmap(
+                Path(__file__).resolve().parents[3] / "logo" / "icon_logo_white.svg",
+                80,
+                80,
+                preserve_aspect=True,
+            )
+        )
+        logo_layout.addWidget(self._header_icon_logo)
+        self._header_name_logo = QLabel()
+        self._header_name_logo.setPixmap(
+            self._load_svg_pixmap(
+                Path(__file__).resolve().parents[3] / "logo" / "name_logo_white.svg",
+                180,
+                180,
+                preserve_aspect=False,
+            )
+        )
+        logo_layout.addWidget(self._header_name_logo)
+        header_layout.addLayout(logo_layout)
         self._header_project_name = QLabel()
         self._header_project_name.setProperty("title", True)
         header_font = QFont()
         header_font.setBold(True)
         self._header_project_name.setFont(header_font)
-        self._header_project_name.setMaximumWidth(260)
+        self._header_project_name.setMaximumWidth(220)
         header_layout.addWidget(self._header_project_name)
         separator = QFrame()
         separator.setFrameShape(QFrame.Shape.VLine)
@@ -1870,14 +1887,56 @@ class MainWindow(QMainWindow):
         if path.exists() and QApplication.instance() is not None:
             QApplication.instance().setStyleSheet(path.read_text(encoding="utf-8"))
 
-    def _load_svg_pixmap(self, svg_path: Path, width: int, height: int) -> QPixmap:
+    def _load_svg_pixmap(self, svg_path: Path, width: int, height: int, preserve_aspect: bool = False) -> QPixmap:
         renderer = QSvgRenderer(str(svg_path))
         pixmap = QPixmap(width, height)
         pixmap.fill(Qt.GlobalColor.transparent)
         painter = QPainter(pixmap)
-        renderer.render(painter)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
+        default_size = renderer.defaultSize()
+        if preserve_aspect and default_size.isValid() and default_size.width() > 0 and default_size.height() > 0:
+            source_aspect = default_size.width() / default_size.height()
+            target_aspect = width / max(height, 1)
+            if source_aspect > target_aspect:
+                render_width = float(width)
+                render_height = render_width / source_aspect
+                render_x = 0.0
+                render_y = (height - render_height) / 2.0
+            else:
+                render_height = float(height)
+                render_width = render_height * source_aspect
+                render_x = (width - render_width) / 2.0
+                render_y = 0.0
+            renderer.render(painter, QRectF(render_x, render_y, render_width, render_height))
+        else:
+            renderer.render(painter, QRectF(0, 0, float(width), float(height)))
         painter.end()
-        return pixmap
+        return self._trim_transparent_pixmap(pixmap)
+
+    def _trim_transparent_pixmap(self, pixmap: QPixmap) -> QPixmap:
+        image = pixmap.toImage()
+        rect = image.rect()
+        left = rect.right()
+        right = rect.left()
+        top = rect.bottom()
+        bottom = rect.top()
+
+        found = False
+        for y in range(rect.top(), rect.bottom() + 1):
+            for x in range(rect.left(), rect.right() + 1):
+                if image.pixelColor(x, y).alpha() > 0:
+                    left = min(left, x)
+                    right = max(right, x)
+                    top = min(top, y)
+                    bottom = max(bottom, y)
+                    found = True
+
+        if not found:
+            return pixmap
+
+        cropped = image.copy(left, top, right - left + 1, bottom - top + 1)
+        return QPixmap.fromImage(cropped)
 
     def _load_svg_icon(self, svg_path: Path, size: int) -> QIcon:
         return QIcon(self._load_svg_pixmap(svg_path, size, size))
