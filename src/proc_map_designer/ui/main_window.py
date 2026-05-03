@@ -239,7 +239,7 @@ class MainWindow(QMainWindow):
         self._updating_layer_tree = False
         self._updating_parameter_form = False
 
-        self.setWindowTitle("Procedural Map Designer")
+        self.setWindowTitle("MAPaint")
         self._apply_stylesheet(Path(__file__).parent / "style" / "theme.qss")
         self.setWindowIcon(self._load_svg_icon(Path(__file__).resolve().parents[3] / "logo" / "icon_logo_white.svg", 32))
         self.resize(1380, 860)
@@ -1866,7 +1866,7 @@ class MainWindow(QMainWindow):
         self._refresh_painted_layers_ui()
         self._set_workflow_step(0)
         project_title = self._project_state.project_name or "Project"
-        self.setWindowTitle(f"Procedural Map Designer - {project_title}")
+        self.setWindowTitle(f"MAPaint - {project_title}")
 
     def _load_terrain_material_catalog(self) -> None:
         self.terrain_material_combo.blockSignals(True)

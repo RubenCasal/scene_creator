@@ -26,7 +26,7 @@ def run_app() -> int:
         format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
     )
     QCoreApplication.setOrganizationName("SceneGenerator")
-    QCoreApplication.setApplicationName("ProceduralMapDesigner")
+    QCoreApplication.setApplicationName("MAPaint")
 
     app = QApplication(sys.argv)
     settings = AppSettings()

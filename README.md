@@ -4,6 +4,16 @@
 
 The application bridges interactive 2D map design with fully automated 3D scene generation, with no manual Blender scripting required.
 
+### Built for synthetic data generation
+
+A primary use case for this tool is producing **synthetic aerial datasets** for training computer vision models. By generating diverse, configurable 3D scenes and rendering them from a top-down or oblique camera, you can produce large volumes of labelled training images for:
+
+- **Object detection** models — trees, buildings, vehicles, and other assets appear as precisely located instances with known bounding boxes
+- **Semantic segmentation** models — each asset category (vegetation, buildings, roads) maps directly to a label class, enabling pixel-accurate ground truth masks
+- **Instance segmentation** models — individual object placements are tracked, enabling per-instance mask generation
+
+Because placement is fully deterministic and parameterised, you can generate hundreds of scene variants by varying density, scale, seed, and asset mix — producing the diversity needed for robust model training without any manual labelling effort.
+
 ---
 
 ## Documentation
@@ -13,6 +23,7 @@ The application bridges interactive 2D map design with fully automated 3D scene 
 | [Installation Guide](documentation/install.md) | Virtual environment setup, Python version, Blender installation, dependencies |
 | [Blender File Configuration](documentation/blender_file_config.md) | How to structure your `.blend` asset library so the app can discover and use it |
 | [Usage Guide](documentation/usage.md) | Full walkthrough of the scene creation pipeline, parameters, and generation backends |
+| [How It Works](documentation/how_it_works.md) | Deep dive into the procedural placement algorithm and Geometry Nodes integration |
 
 ---
 
