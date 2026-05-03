@@ -1,4 +1,4 @@
-<div align="center">
+
 
 <img src="logo/horizontal_logo.svg" alt="MAPaint icon" width="820" />
 
@@ -11,7 +11,7 @@
 ![Geometry Nodes](https://img.shields.io/badge/Geometry%20Nodes-Procedural-FFB000?style=for-the-badge)
 
 
-</div>
+
 
 ---
 
