@@ -1,27 +1,23 @@
 <div align="center">
 
-<img src="logo/icon_logo.svg" alt="MAPaint icon" width="96" />
+<img src="logo/horizontal_logo.svg" alt="MAPaint icon" width="120" />
 
-<img src="logo/name_logo.svg" alt="MAPaint" width="360" />
+
 
 <br/>
 <br/>
 
 ![Python](https://img.shields.io/badge/Python-3.13+-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![PySide6](https://img.shields.io/badge/PySide6-Desktop%20GUI-41CD52?style=for-the-badge&logo=qt&logoColor=white)
-![Blender](https://img.shields.io/badge/Blender-4.x-F5792A?style=for-the-badge&logo=blender&logoColor=white)
+![Blender](https://img.shields.io/badge/Blender-5.x-F5792A?style=for-the-badge&logo=blender&logoColor=white)
 ![Geometry Nodes](https://img.shields.io/badge/Geometry%20Nodes-Procedural-FFB000?style=for-the-badge)
-![PyOpenGL](https://img.shields.io/badge/PyOpenGL-Terrain%20Viewport-5586A4?style=for-the-badge)
-![NumPy](https://img.shields.io/badge/NumPy-Spatial%20Math-013243?style=for-the-badge&logo=numpy&logoColor=white)
-![Pillow](https://img.shields.io/badge/Pillow-Heightfields-8CAAE6?style=for-the-badge)
-![SciPy](https://img.shields.io/badge/SciPy-Brush%20Filters-8A2BE2?style=for-the-badge&logo=scipy&logoColor=white)
 ![Linux](https://img.shields.io/badge/Linux-Primary%20Target-FCC624?style=for-the-badge&logo=linux&logoColor=black)
 
 </div>
 
 ---
 
-# MAPaint
+# MAPaint: A 3D scene generator for aerial semantic data creation
 
 **MAPaint** is a Linux desktop application for creating large-scale 3D scenes procedurally. You paint 2D masks over a logical map, configure per-layer generation parameters, and let the tool drive Blender in headless mode to place and generate thousands of objects (trees, buildings, roads, terrain) in a final `.blend` file — ready for rendering or further editing.
 
