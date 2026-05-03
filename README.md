@@ -1,6 +1,6 @@
 
 
-<img src="logo/horizontal_logo.svg" alt="MAPaint icon" width="820" />
+<img src="logo/horizontal_logo.svg" alt="MAPaint icon" width="220" />
 
 
 
