@@ -1,76 +1,170 @@
-# MAPaint
+<div align="center">
 
-**MAPaint** is a Linux desktop application for creating large-scale 3D scenes procedurally. You paint 2D masks over a logical map, configure per-layer generation parameters, and let the tool drive Blender in headless mode to place and generate thousands of objects (trees, buildings, roads, terrain) in a final `.blend` file — ready for rendering or further editing.
+<img src="logo/icon_logo.svg" alt="MAPaint icon" width="96" />
 
-The application bridges interactive 2D map design with fully automated 3D scene generation, with no manual Blender scripting required.
+<img src="logo/name_logo.svg" alt="MAPaint" width="360" />
 
-### Built for synthetic data generation
+<br/>
+<br/>
 
-A primary use case for this tool is producing **synthetic aerial datasets** for training computer vision models. By generating diverse, configurable 3D scenes and rendering them from a top-down or oblique camera, you can produce large volumes of labelled training images for:
+![Python](https://img.shields.io/badge/Python-3.13+-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![PySide6](https://img.shields.io/badge/PySide6-Desktop%20GUI-41CD52?style=for-the-badge&logo=qt&logoColor=white)
+![Blender](https://img.shields.io/badge/Blender-4.x-F5792A?style=for-the-badge&logo=blender&logoColor=white)
+![Geometry Nodes](https://img.shields.io/badge/Geometry%20Nodes-Procedural-FFB000?style=for-the-badge)
+![PyOpenGL](https://img.shields.io/badge/PyOpenGL-Terrain%20Viewport-5586A4?style=for-the-badge)
+![NumPy](https://img.shields.io/badge/NumPy-Spatial%20Math-013243?style=for-the-badge&logo=numpy&logoColor=white)
+![Pillow](https://img.shields.io/badge/Pillow-Heightfields-8CAAE6?style=for-the-badge)
+![SciPy](https://img.shields.io/badge/SciPy-Brush%20Filters-8A2BE2?style=for-the-badge&logo=scipy&logoColor=white)
+![Linux](https://img.shields.io/badge/Linux-Primary%20Target-FCC624?style=for-the-badge&logo=linux&logoColor=black)
 
-- **Object detection** models — trees, buildings, vehicles, and other assets appear as precisely located instances with known bounding boxes
-- **Semantic segmentation** models — each asset category (vegetation, buildings, roads) maps directly to a label class, enabling pixel-accurate ground truth masks
-- **Instance segmentation** models — individual object placements are tracked, enabling per-instance mask generation
+</div>
 
-Because placement is fully deterministic and parameterised, you can generate hundreds of scene variants by varying density, scale, seed, and asset mix — producing the diversity needed for robust model training without any manual labelling effort.
+---
+
+# MAPaint: A 3D scene generator for semantic data generation
+
+**MAPaint** is a Linux-first desktop application for painting semantic map layers and converting them into fully generated 3D scenes in Blender. It combines a Qt-based editor, deterministic placement logic, Geometry Nodes driven procedural generation, editable roads, terrain texturing, and Blender subprocess automation to help you build structured synthetic environments quickly and reproducibly.
+
+It is especially useful for workflows where a **2D semantic layout** must become a **3D world** that can later be rendered, exported, or used for **synthetic data generation**.
+
+---
+
+## What MAPaint does
+
+MAPaint lets you:
+
+- inspect a source `.blend` asset library and expose nested collections as paintable semantic layers
+- paint placement masks for vegetation, buildings, and other categories on a logical map
+- draw **procedural roads** directly in the editor
+- assign **terrain materials** from built-in Blender material libraries
+- generate scenes through either a **Python batch backend** or a **Geometry Nodes backend**
+- save the full project state so generation is reproducible and deterministic
+- prepare structured scenes for **semantic / synthetic dataset creation**
+
+---
+
+## Main capabilities
+
+### Semantic mask painting
+Paint grayscale masks for different scene categories and control how objects are distributed in the final generated `.blend`.
+
+### Deterministic object placement
+Per-layer density, overlap rules, minimum distance, scale range, rotation randomness, priority, and seed are all stored as explicit project state.
+
+### Procedural roads
+Draw roads as vector strokes instead of raster masks and generate them in Blender with reusable procedural road assets and Geometry Nodes.
+
+### Terrain pipeline
+Select built-in terrain materials and prepare the project for terrain-aware generation and future sculpt/heightfield workflows.
+
+### Blender subprocess generation
+Blender is kept as a subprocess runtime, not the main UI. MAPaint exports a package, validates it, generates the scene headlessly, and saves the result as a working `.blend`.
+
+---
+
+## Why this repo exists
+
+MAPaint is designed for workflows such as:
+
+- **semantic data generation**
+- **synthetic aerial / top-down datasets**
+- **procedural environment prototyping**
+- **structured 3D scene authoring from semantic intent**
+
+Because generation is reproducible and driven by explicit project state, MAPaint is suitable for producing many controlled variations of the same scene family without manual Blender setup every time.
+
+---
+
+## Core workflow
+
+1. **Choose a source `.blend`** containing your asset collections
+2. **Inspect the collection tree** and expose layers in the editor
+3. **Configure the map** (logical size, mask resolution, terrain material, output path, backend)
+4. **Paint semantic masks** for asset categories
+5. **Draw roads** where needed
+6. **Tune generation parameters** per painted layer
+7. **Validate and generate** a `working_map.blend`
+8. **Export** a cleaned final result if needed
+
+---
+
+## Repository highlights
+
+```text
+src/proc_map_designer/
+├── domain/            # Pure project models, validation, transforms, rules
+├── services/          # Export, generation orchestration, terrain services
+├── infrastructure/    # Blender runner, settings, project repository
+├── ui/                # Qt application UI, terrain viewport, paint workflow
+├── blender_bridge/    # Placement planner, package loader, terrain sampler
+└── ai/                # LLM-assisted Blender script generation pipeline
+
+scripts/               # Blender-side subprocess scripts
+documentation/         # Guides and implementation notes
+blender_defaults/      # Built-in roads, terrain materials, and reusable assets
+tests/                 # Unit tests for domain, services, and bridge logic
+```
 
 ---
 
 ## Documentation
 
-| Guide | Description |
+| Guide | Purpose |
 |---|---|
-| [Installation Guide](documentation/install.md) | Virtual environment setup, Python version, Blender installation, dependencies |
-| [Blender File Configuration](documentation/blender_file_config.md) | How to structure your `.blend` asset library so the app can discover and use it |
-| [Usage Guide](documentation/usage.md) | Full walkthrough of the scene creation pipeline, parameters, and generation backends |
-| [How It Works](documentation/how_it_works.md) | Deep dive into the procedural placement algorithm and Geometry Nodes integration |
+| [Installation Guide](documentation/install.md) | Set up Python, Blender, dependencies, and runtime environment |
+| [Blender File Configuration](documentation/blender_file_config.md) | Structure your `.blend` asset library so MAPaint can discover and use it |
+| [Usage Guide](documentation/usage.md) | End-to-end walkthrough of the authoring and generation workflow |
+| [How It Works](documentation/how_it_works.md) | Technical explanation of placement, generation, and Geometry Nodes integration |
 
 ---
 
-## Quick Start
-
-1. **Prepare your asset library** — Organise your 3D objects in a `.blend` file using nested collections (`vegetation/pine_tree`, `buildings/hangar`, etc.)
-2. **Open the app** — Select your Blender executable and your `.blend` file; the app inspects its collection structure automatically
-3. **Configure the map** — Set real-world dimensions, mask resolution, and optionally a base terrain plane
-4. **Paint your scene** — Use the 2D canvas to paint grayscale masks that control where each asset category is placed
-5. **Tune parameters** — Adjust density, scale range, rotation, minimum distance, and seeding per layer
-6. **Generate** — Run the pipeline; Blender executes headlessly and produces a `working_map.blend` with all objects placed
-7. **Export** — Export a clean `final_map.blend` with objects neatly organised under category collections
-
----
-
-## Demo
-
-<!-- Add screenshots or screen recordings here -->
-<!-- Example: ![App screenshot](documentation/images/demo_overview.png) -->
-<!-- Example: ![Canvas painting](documentation/images/demo_canvas.png) -->
-<!-- Example: ![Generated scene in Blender](documentation/images/demo_result.png) -->
-
-> Screenshots coming soon.
-
----
-
-## Tech Stack
-
-- **Python 3.13** + **PySide6** — Desktop UI
-- **Blender 4.x** — Headless 3D generation backend
-- **NumPy / Pillow / SciPy** — Mask processing and spatial math
-- **PyOpenGL** — Terrain viewport
-
----
-
-## Running
+## Quick start
 
 ```bash
-# Activate your virtual environment first
+# activate the virtual environment
 source .venv/bin/activate
 
-# Launch the app
-python main.py
+# install dependencies
+python -m pip install -r requirements.txt
+
+# launch the app
+./main.py
 ```
 
-## Tests
+---
+
+## Running tests
 
 ```bash
 python -m unittest discover -s tests -v
 ```
+
+---
+
+## Tech stack
+
+- **Python 3.13+**
+- **PySide6** for the desktop UI
+- **Blender 4.x / 5.x** as headless generation runtime
+- **Geometry Nodes** for procedural road and scene generation workflows
+- **NumPy / Pillow / SciPy** for masks, heightfields, sampling, and filters
+- **PyOpenGL** for the terrain viewport pipeline
+
+---
+
+## Current direction
+
+MAPaint is evolving toward a full semantic-to-3D authoring tool with:
+
+- paint-driven scene composition
+- procedural roads and terrain
+- terrain sculpting / heightfield workflows
+- deterministic asset placement
+- synthetic dataset preparation
+- optional AI-assisted Blender generation
+
+---
+
+## Branding
+
+The real application name is **MAPaint**.
