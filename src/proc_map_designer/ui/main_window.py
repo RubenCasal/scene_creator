@@ -70,6 +70,7 @@ except Exception as exc:  # pragma: no cover - optional runtime dependency path
 
 EXPECTED_ROOTS = {"vegetation", "building"}
 ROAD_TOOL_TREE_ID = "__road_tool__"
+DEFAULT_ROAD_SCALE = 6
 
 
 @dataclass(slots=True)
@@ -613,12 +614,12 @@ class MainWindow(QMainWindow):
         self.road_group = QGroupBox("Road")
         road_layout = QVBoxLayout(self.road_group)
         road_layout.setSpacing(8)
-        self.road_width_label = QLabel(f"Width  {self._brush_tool.radius_px:.0f}")
+        self.road_width_label = QLabel(f"Road Scale  {DEFAULT_ROAD_SCALE}")
         self.road_width_label.setProperty("secondary", True)
         road_layout.addWidget(self.road_width_label)
         self.road_width_slider = QSlider(Qt.Orientation.Horizontal)
         self.road_width_slider.setRange(1, 128)
-        self.road_width_slider.setValue(self._brush_tool.radius_px)
+        self.road_width_slider.setValue(DEFAULT_ROAD_SCALE)
         self.road_width_slider.valueChanged.connect(self._on_road_width_changed)
         road_layout.addWidget(self.road_width_slider)
 
@@ -1747,7 +1748,7 @@ class MainWindow(QMainWindow):
         self.road_group.setVisible(False)
 
     def _on_road_width_changed(self, value: int) -> None:
-        self.road_width_label.setText(f"Width  {value}")
+        self.road_width_label.setText(f"Road Scale  {value}")
         self.canvas_view.set_road_width(float(value))
 
     def _on_road_profile_changed(self, _index: int) -> None:
