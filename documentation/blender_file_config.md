@@ -1,6 +1,6 @@
 # Blender File Configuration
 
-This guide explains how to structure your `.blend` asset library so that Procedural Map Designer can discover your 3D objects, assign them to map layers, and place them correctly during generation.
+This guide explains how to structure your `.blend` asset library so that MAPaint can discover your 3D objects, assign them to map layers, and place them correctly during generation.
 
 ---
 

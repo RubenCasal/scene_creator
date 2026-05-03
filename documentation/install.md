@@ -1,6 +1,6 @@
 # Installation Guide
 
-This guide covers everything needed to run Procedural Map Designer on a Linux system.
+This guide covers everything needed to run MAPaint on a Linux system.
 
 ---
 
@@ -45,7 +45,7 @@ python3.13 --version
 
 ## 2 — Install Blender
 
-Procedural Map Designer drives Blender as a headless subprocess. Blender must be installed separately and its executable path must be configured inside the app.
+MAPaint drives Blender as a headless subprocess. Blender must be installed separately and its executable path must be configured inside the app.
 
 ### Option A — Official binary (recommended)
 

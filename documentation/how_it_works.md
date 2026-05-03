@@ -1,6 +1,6 @@
 # How It Works — Procedural Generation
 
-This document explains the technical mechanisms behind how Procedural Map Designer places objects, generates roads, and uses Blender's Geometry Nodes system.
+This document explains the technical mechanisms behind how MAPaint places objects, generates roads, and uses Blender's Geometry Nodes system.
 
 ---
 
@@ -274,7 +274,7 @@ The `project.json` schema (version 3) is the single source of truth for generati
 
 ```
                     ┌─────────────────────────────┐
-                    │     Procedural Map Designer  │
+                    │            MAPaint           │
                     │         (PySide6 UI)         │
                     └──────────────┬──────────────┘
                                    │  Paint masks, set parameters

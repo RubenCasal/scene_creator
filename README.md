@@ -1,6 +1,6 @@
-# Procedural Map Designer
+# MAPaint
 
-**Procedural Map Designer** is a Linux desktop application for creating large-scale 3D scenes procedurally. You paint 2D masks over a logical map, configure per-layer generation parameters, and let the tool drive Blender in headless mode to place and generate thousands of objects (trees, buildings, roads, terrain) in a final `.blend` file — ready for rendering or further editing.
+**MAPaint** is a Linux desktop application for creating large-scale 3D scenes procedurally. You paint 2D masks over a logical map, configure per-layer generation parameters, and let the tool drive Blender in headless mode to place and generate thousands of objects (trees, buildings, roads, terrain) in a final `.blend` file — ready for rendering or further editing.
 
 The application bridges interactive 2D map design with fully automated 3D scene generation, with no manual Blender scripting required.
 

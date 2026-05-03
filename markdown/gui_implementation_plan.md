@@ -1,4 +1,4 @@
-# GUI Implementation Plan — Procedural Map Designer
+# GUI Implementation Plan — MAPaint
 **Reference:** `markdown/image.png` — dark navy dashboard with teal accent, card panels, pill status badges  
 **Rule:** Zero functional regression. Every signal/slot, every action, every method signature stays intact.
 
