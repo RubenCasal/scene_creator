@@ -1,17 +1,12 @@
-
-<p align="center">
-<img src="logo/horizontal_logo.svg" alt="MAPaint icon" width="420" />
-</p>
-
-
-
-![Python](https://img.shields.io/badge/Python-3.13+-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![PySide6](https://img.shields.io/badge/PySide6-Desktop%20GUI-41CD52?style=for-the-badge&logo=qt&logoColor=white)
-![Blender](https://img.shields.io/badge/Blender-5.x-F5792A?style=for-the-badge&logo=blender&logoColor=white)
-![Geometry Nodes](https://img.shields.io/badge/Geometry%20Nodes-Procedural-FFB000?style=for-the-badge)
-
-
-
+<div align="center">
+  <img src="logo/horizontal_logo.svg" alt="MAPaint logo" width="420" />
+  <br/>
+  <br/>
+  <img src="https://img.shields.io/badge/Python-3.13+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
+  <img src="https://img.shields.io/badge/PySide6-Desktop%20GUI-41CD52?style=for-the-badge&logo=qt&logoColor=white" alt="PySide6" />
+  <img src="https://img.shields.io/badge/Blender-5.x-F5792A?style=for-the-badge&logo=blender&logoColor=white" alt="Blender" />
+  <img src="https://img.shields.io/badge/Geometry%20Nodes-Procedural-FFB000?style=for-the-badge" alt="Geometry Nodes" />
+</div>
 
 ---
 
