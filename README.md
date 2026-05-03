@@ -1,6 +1,6 @@
 
 <p align="center">
-<img src="logo/horizontal_logo.svg" alt="MAPaint icon" width="220" />
+<img src="logo/horizontal_logo.svg" alt="MAPaint icon" width="420" />
 </p>
 
 
