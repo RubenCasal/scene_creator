@@ -20,7 +20,16 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 @dataclass(slots=True)
+class ExportSingleInstancePlacement:
+    x: float
+    y: float
+    rotation_z_deg: float
+    scale: float
+
+
+@dataclass(slots=True)
 class ExportLayerSettings:
+    mode: str
     density: float
     min_distance: float
     allow_overlap: bool
@@ -29,6 +38,7 @@ class ExportLayerSettings:
     rotation_random_z: float
     seed: int
     priority: int
+    bounding_radius: float | None = None
 
 
 @dataclass(slots=True)
@@ -37,8 +47,10 @@ class ExportLayerDefinition:
     category: str
     name: str
     enabled: bool
-    mask_path: Path
+    generation_mode: str
+    mask_path: Path | None
     mask_exists: bool
+    single_instances: list[ExportSingleInstancePlacement]
     settings: ExportLayerSettings
 
 
@@ -128,7 +140,7 @@ def load_export_package(project_json_path: Path, *, require_mask_files: bool = F
 
     root = require_mapping(payload, "project.json")
     schema_version = require_int(root.get("schema_version"), "schema_version")
-    if schema_version not in {1, 2, EXPORT_PACKAGE_SCHEMA_VERSION}:
+    if schema_version not in {1, 2, 3, EXPORT_PACKAGE_SCHEMA_VERSION}:
         raise ValueError(
             f"Schema no soportado {schema_version}. Esperado: {EXPORT_PACKAGE_SCHEMA_VERSION}."
         )
@@ -198,20 +210,55 @@ def load_export_package(project_json_path: Path, *, require_mask_files: bool = F
             "layers[].blender_collection",
         )
         category, _ = split_layer_id(blender_collection)
-        mask_relative = require_string(layer_payload.get("mask_path"), "layers[].mask_path")
-        mask_path = (package_dir / mask_relative).resolve()
-        try:
-            mask_path.relative_to(package_dir)
-        except ValueError as exc:
-            raise ValueError(
-                f"La máscara '{mask_relative}' debe residir dentro del paquete exportado."
-            ) from exc
-        mask_exists = mask_path.exists()
-        if require_mask_files and not mask_exists:
-            raise ValueError(f"Archivo de máscara inexistente: {mask_path}")
+        generation_mode = require_string(layer_payload.get("generation_mode", "procedural"), "layers[].generation_mode")
+        if generation_mode not in {"procedural", "single"}:
+            raise ValueError("layers[].generation_mode debe ser 'procedural' o 'single'.")
+
+        mask_raw = layer_payload.get("mask_path")
+        if generation_mode == "single":
+            mask_path = None
+            mask_exists = False
+        else:
+            mask_relative = require_string(mask_raw, "layers[].mask_path")
+            mask_path = (package_dir / mask_relative).resolve()
+            try:
+                mask_path.relative_to(package_dir)
+            except ValueError as exc:
+                raise ValueError(
+                    f"La máscara '{mask_relative}' debe residir dentro del paquete exportado."
+                ) from exc
+            mask_exists = mask_path.exists()
+            if require_mask_files and not mask_exists:
+                raise ValueError(f"Archivo de máscara inexistente: {mask_path}")
+
+        raw_single_instances = layer_payload.get("single_instances")
+        if raw_single_instances is None and layer_payload.get("single_instance") is not None:
+            raw_single_instances = [layer_payload.get("single_instance")]
+        single_instances: list[ExportSingleInstancePlacement] = []
+        if raw_single_instances is not None:
+            for raw_single in require_list(raw_single_instances, "layers[].single_instances"):
+                single_payload = require_mapping(raw_single, "layers[].single_instances[]")
+                single_instances.append(
+                    ExportSingleInstancePlacement(
+                        x=require_float(single_payload.get("x"), "layers[].single_instances[].x"),
+                        y=require_float(single_payload.get("y"), "layers[].single_instances[].y"),
+                        rotation_z_deg=require_float(
+                            single_payload.get("rotation_z_deg", 0.0),
+                            "layers[].single_instances[].rotation_z_deg",
+                        ),
+                        scale=require_float(
+                            single_payload.get("scale", 1.0),
+                            "layers[].single_instances[].scale",
+                            min_value=0.0,
+                        ),
+                    )
+                )
+        if generation_mode == "single" and not single_instances:
+            raise ValueError("layers[].single_instances es requerido cuando generation_mode='single'.")
 
         settings_payload = require_mapping(layer_payload.get("settings", {}), "layers[].settings")
         layer_settings = ExportLayerSettings(
+            mode=require_string(settings_payload.get("mode", generation_mode), "layers[].settings.mode"),
             density=require_float(settings_payload.get("density"), "layers[].settings.density", min_value=0.0),
             min_distance=require_float(
                 settings_payload.get("min_distance"),
@@ -230,7 +277,16 @@ def load_export_package(project_json_path: Path, *, require_mask_files: bool = F
             ),
             seed=require_int(settings_payload.get("seed"), "layers[].settings.seed"),
             priority=require_int(settings_payload.get("priority"), "layers[].settings.priority"),
+            bounding_radius=(
+                require_float(settings_payload.get("bounding_radius"), "layers[].settings.bounding_radius", min_value=0.0)
+                if settings_payload.get("bounding_radius") is not None
+                else None
+            ),
         )
+        if layer_settings.mode not in {"procedural", "single"}:
+            raise ValueError("layers[].settings.mode debe ser 'procedural' o 'single'.")
+        if layer_settings.mode != generation_mode:
+            raise ValueError("layers[].generation_mode y layers[].settings.mode deben coincidir.")
         if layer_settings.scale_min > layer_settings.scale_max:
             raise ValueError(
                 f"scale_min > scale_max en la capa '{blender_collection}'."
@@ -242,8 +298,10 @@ def load_export_package(project_json_path: Path, *, require_mask_files: bool = F
             name=require_string(layer_payload.get("name", blender_collection), "layers[].name", allow_empty=True)
             or blender_collection,
             enabled=require_bool(layer_payload.get("enabled", True), "layers[].enabled"),
+            generation_mode=generation_mode,
             mask_path=mask_path,
             mask_exists=mask_exists,
+            single_instances=single_instances,
             settings=layer_settings,
         )
         layers.append(layer)

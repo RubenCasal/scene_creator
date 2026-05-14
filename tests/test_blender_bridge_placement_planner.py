@@ -9,7 +9,7 @@ SRC_PATH = PROJECT_ROOT / "src"
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
-from proc_map_designer.blender_bridge.package_loader import ExportLayerSettings
+from proc_map_designer.blender_bridge.package_loader import ExportLayerSettings, ExportSingleInstancePlacement
 from proc_map_designer.blender_bridge.placement_planner import (
     LayerPlanInput,
     MapDimensions,
@@ -23,6 +23,7 @@ class PlacementPlannerTests(unittest.TestCase):
         dims = MapDimensions(width=10.0, height=10.0, mask_width=2, mask_height=1)
         mask = MaskField(width=2, height=1, values=(1.0, 0.5))
         settings = ExportLayerSettings(
+            mode="procedural",
             density=1.0,
             min_distance=0.0,
             allow_overlap=True,
@@ -59,6 +60,7 @@ class PlacementPlannerTests(unittest.TestCase):
             category="category",
             enabled=True,
             settings=ExportLayerSettings(
+                mode="procedural",
                 density=1.0,
                 min_distance=100.0,
                 allow_overlap=False,
@@ -75,6 +77,7 @@ class PlacementPlannerTests(unittest.TestCase):
             category="category",
             enabled=True,
             settings=ExportLayerSettings(
+                mode="procedural",
                 density=1.0,
                 min_distance=100.0,
                 allow_overlap=False,
@@ -101,6 +104,7 @@ class PlacementPlannerTests(unittest.TestCase):
             category="cat",
             enabled=True,
             settings=ExportLayerSettings(
+                mode="procedural",
                 density=4.0,
                 min_distance=100.0,
                 allow_overlap=True,
@@ -119,6 +123,7 @@ class PlacementPlannerTests(unittest.TestCase):
 
     def test_uniform_density_is_not_resolution_dependent(self) -> None:
         settings = ExportLayerSettings(
+            mode="procedural",
             density=1.0,
             min_distance=0.0,
             allow_overlap=True,
@@ -158,6 +163,35 @@ class PlacementPlannerTests(unittest.TestCase):
         )[0]
 
         self.assertEqual(len(low_res_plan.placements), len(high_res_plan.placements))
+
+    def test_single_mode_returns_exactly_one_placement_without_mask(self) -> None:
+        dims = MapDimensions(width=100.0, height=100.0, mask_width=10, mask_height=10)
+        settings = ExportLayerSettings(
+            mode="single",
+            density=1.0,
+            min_distance=0.0,
+            allow_overlap=True,
+            scale_min=1.0,
+            scale_max=1.0,
+            rotation_random_z=0.0,
+            seed=7,
+            priority=0,
+        )
+        layer = LayerPlanInput(
+            layer_id="building/house",
+            category="building",
+            enabled=True,
+            settings=settings,
+            mask=None,
+            single_instances=[
+                ExportSingleInstancePlacement(x=12.0, y=-4.0, rotation_z_deg=30.0, scale=0.9),
+                ExportSingleInstancePlacement(x=8.0, y=6.0, rotation_z_deg=10.0, scale=1.1),
+            ],
+        )
+        plan = plan_generation("proj", dims, [layer])[0]
+        self.assertEqual(len(plan.placements), 2)
+        self.assertEqual(plan.placements[0].x, 12.0)
+        self.assertEqual(plan.placements[0].rotation_z_deg, 30.0)
 
 
 if __name__ == "__main__":

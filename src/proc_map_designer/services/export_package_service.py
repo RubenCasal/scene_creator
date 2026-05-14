@@ -11,6 +11,7 @@ from proc_map_designer.domain.export_package import (
     ExportLayerSettings,
     ExportMap,
     ExportProject,
+    ExportSingleInstancePlacement,
     ExportTerrain,
     ExportRoad,
     ExportRoadGenerator,
@@ -39,7 +40,9 @@ class ExportPackageService:
         self._validate_required_project_fields(project)
         package_dir.mkdir(parents=True, exist_ok=True)
 
-        layer_ids = [layer.layer_id for layer in project.layers]
+        layer_ids = [
+            layer.layer_id for layer in project.layers if layer.generation_settings.mode == "procedural"
+        ]
         try:
             mask_paths = mask_exporter(package_dir, layer_ids)
         except ExportPackageError:
@@ -96,14 +99,31 @@ class ExportPackageService:
 
         layers_payload: list[ExportLayer] = []
         for layer in project.layers:
-            mask_path = self._resolve_and_validate_mask_path(
-                package_dir=package_dir,
-                layer_state=layer,
-                mask_paths=mask_paths,
-            )
             category, _ = split_layer_id(layer.layer_id)
             layer_seed = self._resolve_layer_seed(project, layer)
             settings = layer.generation_settings
+            if settings.mode == "single":
+                if not settings.single_instances:
+                    raise ExportPackageError(
+                        f"Layer '{layer.layer_id}' is in single mode but has no placement defined."
+                    )
+                mask_path = None
+                single_instances = [
+                    ExportSingleInstancePlacement(
+                        x=placement.x,
+                        y=placement.y,
+                        rotation_z_deg=placement.rotation_z_deg,
+                        scale=placement.scale,
+                    )
+                    for placement in settings.single_instances
+                ]
+            else:
+                mask_path = self._resolve_and_validate_mask_path(
+                    package_dir=package_dir,
+                    layer_state=layer,
+                    mask_paths=mask_paths,
+                )
+                single_instances = []
 
             layers_payload.append(
                 ExportLayer(
@@ -111,8 +131,11 @@ class ExportPackageService:
                     name=layer.name or layer.layer_id,
                     blender_collection=layer.layer_id,
                     enabled=settings.enabled,
+                    generation_mode=settings.mode,
                     mask_path=mask_path,
+                    single_instances=single_instances,
                     settings=ExportLayerSettings(
+                        mode=settings.mode,
                         density=settings.density,
                         min_distance=settings.min_distance,
                         allow_overlap=settings.allow_overlap,
@@ -121,6 +144,7 @@ class ExportPackageService:
                         rotation_random_z=settings.rotation_random_z,
                         seed=layer_seed,
                         priority=settings.priority,
+                        bounding_radius=settings.bounding_radius,
                     ),
                 )
             )

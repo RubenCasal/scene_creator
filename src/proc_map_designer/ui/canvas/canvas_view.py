@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import math
+
 from PySide6.QtCore import QPoint, QPointF, QRectF, Qt, Signal
-from PySide6.QtGui import QMouseEvent, QPainter, QPen, QPixmap, QTransform, QWheelEvent
+from PySide6.QtGui import QColor, QMouseEvent, QPainter, QPen, QPixmap, QTransform, QWheelEvent
 from PySide6.QtWidgets import (
     QGraphicsPixmapItem,
     QGraphicsRectItem,
@@ -9,7 +11,7 @@ from PySide6.QtWidgets import (
     QGraphicsView,
 )
 
-from proc_map_designer.domain.project_state import MapSettings
+from proc_map_designer.domain.project_state import MapSettings, SingleInstancePlacement
 from proc_map_designer.ui.canvas.brush_tool import BrushTool
 from proc_map_designer.ui.canvas.layer_mask_manager import LayerMaskManager
 from proc_map_designer.ui.canvas.overlay_renderer import OverlayRenderer
@@ -20,6 +22,7 @@ from proc_map_designer.ui.canvas.road_overlay_renderer import RoadOverlayRendere
 class CanvasView(QGraphicsView):
     mask_modified = Signal()
     road_modified = Signal()
+    single_instance_modified = Signal()
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -50,6 +53,10 @@ class CanvasView(QGraphicsView):
         self._edit_mode = "paint"
         self._road_width = 6.0
         self._road_profile = "single"
+        self._single_instance_scale = 1.0
+        self._single_instance_rotation_z = 0.0
+        self._single_marker_half_size = 3.0
+        self._single_remove_radius = 8.0
 
         self._is_drawing = False
         self._last_scene_point: QPointF | None = None
@@ -92,6 +99,10 @@ class CanvasView(QGraphicsView):
     def set_road_profile(self, profile: str) -> None:
         self._road_profile = profile
 
+    def set_single_instance_defaults(self, *, scale: float, rotation_z_deg: float) -> None:
+        self._single_instance_scale = max(0.0, float(scale))
+        self._single_instance_rotation_z = float(rotation_z_deg)
+
     def refresh_overlay(self) -> None:
         self._refresh_overlay_pixmap()
         self.viewport().update()
@@ -99,6 +110,7 @@ class CanvasView(QGraphicsView):
     def drawForeground(self, painter: QPainter, rect: QRectF) -> None:
         super().drawForeground(painter, rect)
         del rect
+        self._draw_single_instance_markers(painter)
         if self._road_manager is None:
             return
         self._road_overlay_renderer.render(
@@ -160,6 +172,22 @@ class CanvasView(QGraphicsView):
             event.accept()
             return
 
+        if event.button() == Qt.MouseButton.LeftButton and self._can_place_single_instance():
+            scene_point = self.mapToScene(event.position().toPoint())
+            if not self._scene.sceneRect().contains(scene_point):
+                return
+            self._place_single_instance_at(scene_point)
+            event.accept()
+            return
+
+        if event.button() == Qt.MouseButton.RightButton and self._can_place_single_instance():
+            scene_point = self.mapToScene(event.position().toPoint())
+            if not self._scene.sceneRect().contains(scene_point):
+                return
+            self._remove_single_instance_near(scene_point)
+            event.accept()
+            return
+
         if event.button() == Qt.MouseButton.LeftButton and self._can_paint():
             scene_point = self.mapToScene(event.position().toPoint())
             if not self._scene.sceneRect().contains(scene_point):
@@ -182,7 +210,7 @@ class CanvasView(QGraphicsView):
             return
 
         if self._is_drawing and self._can_draw_road():
-            scene_point = self.mapToScene(event.position().toPoint())
+            scene_point = self._clamp_to_scene_rect(self.mapToScene(event.position().toPoint()))
             if self._road_manager is None:
                 return
             self._road_manager.extend_stroke(scene_point)
@@ -192,7 +220,7 @@ class CanvasView(QGraphicsView):
             return
 
         if self._is_drawing and self._can_paint():
-            scene_point = self.mapToScene(event.position().toPoint())
+            scene_point = self._clamp_to_scene_rect(self.mapToScene(event.position().toPoint()))
             if self._last_scene_point is None:
                 self._last_scene_point = scene_point
             self._paint_segment(self._last_scene_point, scene_point)
@@ -211,7 +239,7 @@ class CanvasView(QGraphicsView):
 
         if event.button() == Qt.MouseButton.LeftButton and self._is_drawing:
             if self._can_draw_road() and self._road_manager is not None:
-                scene_point = self.mapToScene(event.position().toPoint())
+                scene_point = self._clamp_to_scene_rect(self.mapToScene(event.position().toPoint()))
                 road = self._road_manager.end_stroke(scene_point)
                 self._is_drawing = False
                 self._last_scene_point = None
@@ -230,7 +258,7 @@ class CanvasView(QGraphicsView):
 
     def _can_paint(self) -> bool:
         return (
-            self._edit_mode != "road"
+            self._edit_mode not in {"road", "single"}
             and self._mask_manager is not None
             and self._active_layer_id is not None
             and self._mask_manager.get_layer(self._active_layer_id) is not None
@@ -238,6 +266,83 @@ class CanvasView(QGraphicsView):
 
     def _can_draw_road(self) -> bool:
         return self._edit_mode == "road" and self._road_manager is not None
+
+    def _can_place_single_instance(self) -> bool:
+        return (
+            self._edit_mode == "single"
+            and self._mask_manager is not None
+            and self._active_layer_id is not None
+            and self._mask_manager.get_layer(self._active_layer_id) is not None
+        )
+
+    def _clamp_to_scene_rect(self, scene_point: QPointF) -> QPointF:
+        rect = self._scene.sceneRect()
+        x = min(max(scene_point.x(), rect.left()), rect.right())
+        y = min(max(scene_point.y(), rect.top()), rect.bottom())
+        return QPointF(x, y)
+
+    def _place_single_instance_at(self, scene_point: QPointF) -> None:
+        if self._mask_manager is None or self._active_layer_id is None:
+            return
+        placement = SingleInstancePlacement(
+            x=float(scene_point.x()),
+            y=float(-scene_point.y()),
+            rotation_z_deg=self._single_instance_rotation_z,
+            scale=self._single_instance_scale,
+        )
+        changed = self._mask_manager.add_single_instance(self._active_layer_id, placement)
+        if not changed:
+            return
+        self.viewport().update()
+        self.single_instance_modified.emit()
+
+    def _remove_single_instance_near(self, scene_point: QPointF) -> None:
+        if self._mask_manager is None or self._active_layer_id is None:
+            return
+        placements = self._mask_manager.get_single_instances(self._active_layer_id)
+        if not placements:
+            return
+        target_x = float(scene_point.x())
+        target_y = float(-scene_point.y())
+        nearest_index = -1
+        nearest_distance = float("inf")
+        for index, placement in enumerate(placements):
+            distance = math.hypot(float(placement.x) - target_x, float(placement.y) - target_y)
+            if distance < nearest_distance:
+                nearest_distance = distance
+                nearest_index = index
+        if nearest_index < 0 or nearest_distance > self._single_remove_radius:
+            return
+        changed = self._mask_manager.remove_single_instance_at_index(self._active_layer_id, nearest_index)
+        if not changed:
+            return
+        self.viewport().update()
+        self.single_instance_modified.emit()
+
+    def _draw_single_instance_markers(self, painter: QPainter) -> None:
+        if self._mask_manager is None:
+            return
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        for layer in self._mask_manager.all_layers():
+            if not layer.visible or layer.generation_settings.mode != "single":
+                continue
+            for placement in layer.generation_settings.single_instances:
+                scene_x = float(placement.x)
+                scene_y = float(-placement.y)
+                rect = QRectF(
+                    scene_x - self._single_marker_half_size,
+                    scene_y - self._single_marker_half_size,
+                    self._single_marker_half_size * 2.0,
+                    self._single_marker_half_size * 2.0,
+                )
+                pen = QPen(QColor(layer.color_hex))
+                pen.setCosmetic(True)
+                pen.setWidthF(2.0 if layer.layer_id == self._active_layer_id else 1.4)
+                painter.setPen(pen)
+                fill = QColor(layer.color_hex)
+                fill.setAlpha(85)
+                painter.setBrush(fill)
+                painter.drawRect(rect)
 
     def _paint_segment(self, start: QPointF, end: QPointF) -> None:
         if not self._can_paint() or self._mask_manager is None or self._active_layer_id is None:

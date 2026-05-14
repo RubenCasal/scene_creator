@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from proc_map_designer.domain.project_state import PROJECT_SCHEMA_VERSION, ProjectState
+from proc_map_designer.domain.project_state import PROJECT_SCHEMA_VERSION, ProjectState, utc_now_iso
 from proc_map_designer.infrastructure.project_repository import ProjectRepository, ProjectRepositoryError
 
 
@@ -38,10 +38,9 @@ class ProjectService:
     def save_project(self, project: ProjectState, file_path: Path) -> None:
         try:
             project.schema_version = PROJECT_SCHEMA_VERSION
-            project.touch()
+            project.updated_at = utc_now_iso()
             if not project.project_name.strip():
                 project.project_name = file_path.stem
             self._repository.save_json(file_path, project.to_dict())
         except ProjectRepositoryError as exc:
             raise ProjectServiceError(str(exc)) from exc
-

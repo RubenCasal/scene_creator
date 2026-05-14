@@ -33,9 +33,9 @@ Because placement is fully deterministic and parameterised, you can generate hun
 1. **Choose a source `.blend`** containing your asset collections
 2. **Inspect the collection tree** and expose layers in the editor
 3. **Configure the map** (logical size, mask resolution, terrain material, output path, backend)
-4. **Paint semantic masks** for asset categories
+4. **Paint semantic masks** or place single-instance markers for asset categories
 5. **Draw roads** where needed
-6. **Tune generation parameters** per painted layer
+6. **Tune generation parameters** per active layer
 7. **Validate and generate** a `working_map.blend`
 8. **Export** a cleaned final result if needed
 

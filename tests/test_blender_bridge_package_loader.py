@@ -24,7 +24,7 @@ class PackageLoaderTests(unittest.TestCase):
             mask_file.write_bytes(b"fake")
 
             manifest = {
-                "schema_version": 3,
+                "schema_version": 5,
                 "project_id": "proj-123",
                 "source_blend": "/tmp/source.blend",
                 "blender_executable": "/usr/bin/blender",
@@ -56,8 +56,10 @@ class PackageLoaderTests(unittest.TestCase):
                         "name": "Pino",
                         "blender_collection": "vegetation/pino",
                         "enabled": True,
+                        "generation_mode": "procedural",
                         "mask_path": "masks/000_test.png",
                         "settings": {
+                            "mode": "procedural",
                             "density": 1.0,
                             "min_distance": 0.5,
                             "allow_overlap": False,
@@ -83,6 +85,7 @@ class PackageLoaderTests(unittest.TestCase):
             self.assertEqual(len(package.layers), 1)
             layer = package.layers[0]
             self.assertTrue(layer.mask_exists)
+            self.assertEqual(layer.generation_mode, "procedural")
             self.assertEqual(layer.settings.seed, 7)
             self.assertAlmostEqual(layer.settings.scale_min, 0.8)
 
@@ -90,7 +93,7 @@ class PackageLoaderTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             package_dir = Path(tmp_dir)
             manifest = {
-                "schema_version": 3,
+                "schema_version": 5,
                 "project_id": "proj-456",
                 "source_blend": "/tmp/source.blend",
                 "blender_executable": "/usr/bin/blender",
@@ -122,8 +125,10 @@ class PackageLoaderTests(unittest.TestCase):
                         "name": "House",
                         "blender_collection": "building/house",
                         "enabled": True,
+                        "generation_mode": "procedural",
                         "mask_path": "masks/missing.png",
                         "settings": {
+                            "mode": "procedural",
                             "density": 1.0,
                             "min_distance": 0.0,
                             "allow_overlap": True,
@@ -153,7 +158,7 @@ class PackageLoaderTests(unittest.TestCase):
             (masks_dir / "ok.png").write_bytes(b"fake")
 
             manifest = {
-                "schema_version": 3,
+                "schema_version": 5,
                 "project_id": "proj-789",
                 "source_blend": "/tmp/source.blend",
                 "blender_executable": "/usr/bin/blender",
@@ -185,8 +190,10 @@ class PackageLoaderTests(unittest.TestCase):
                         "name": "House",
                         "blender_collection": "building/house",
                         "enabled": True,
+                        "generation_mode": "procedural",
                         "mask_path": "masks/ok.png",
                         "settings": {
+                            "mode": "procedural",
                             "density": 1.0,
                             "min_distance": 0.0,
                             "allow_overlap": True,
@@ -215,7 +222,7 @@ class PackageLoaderTests(unittest.TestCase):
             material_blend.write_bytes(b"blend")
 
             manifest = {
-                "schema_version": 3,
+                "schema_version": 5,
                 "project_id": "proj-road",
                 "source_blend": "/tmp/source.blend",
                 "blender_executable": "/usr/bin/blender",
@@ -267,6 +274,70 @@ class PackageLoaderTests(unittest.TestCase):
             self.assertEqual(package.roads[0].style.profile, "double")
             self.assertTrue(package.roads[0].generator.geometry_nodes_asset_exists)
             self.assertTrue(package.roads[0].generator.material_library_blend_exists)
+
+    def test_single_instance_layer_loads_without_mask(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            package_dir = Path(tmp_dir)
+            manifest = {
+                "schema_version": 5,
+                "project_id": "proj-single",
+                "source_blend": "/tmp/source.blend",
+                "blender_executable": "/usr/bin/blender",
+                "output_blend": "/tmp/output.blend",
+                "map": {
+                    "width": 50.0,
+                    "height": 50.0,
+                    "unit": "m",
+                    "base_plane_object": "",
+                    "terrain_material_id": "terrain_grass",
+                    "terrain": {
+                        "enabled": False,
+                        "max_height": 10.0,
+                        "export_subdivision": 7,
+                        "heightfield_resolution": 512,
+                        "heightfield_path": "",
+                        "noise_enabled": False,
+                        "noise_scale": 1.0,
+                        "noise_strength": 0.25,
+                        "noise_octaves": 4,
+                        "noise_roughness": 0.5,
+                        "noise_seed": 0
+                    },
+                    "mask_resolution": {"width": 8, "height": 8},
+                },
+                "layers": [
+                    {
+                        "category": "building",
+                        "name": "House",
+                        "blender_collection": "building/house",
+                        "enabled": True,
+                        "generation_mode": "single",
+                        "mask_path": None,
+                        "single_instances": [
+                            {"x": 1.0, "y": 2.0, "rotation_z_deg": 10.0, "scale": 0.9},
+                            {"x": 4.0, "y": 5.0, "rotation_z_deg": 45.0, "scale": 1.1},
+                        ],
+                        "settings": {
+                            "mode": "single",
+                            "density": 1.0,
+                            "min_distance": 0.0,
+                            "allow_overlap": True,
+                            "scale_min": 1.0,
+                            "scale_max": 1.0,
+                            "rotation_random_z": 0.0,
+                            "seed": 0,
+                            "priority": 0,
+                        },
+                    }
+                ],
+                "roads": [],
+            }
+            manifest_path = package_dir / "project.json"
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            package = load_export_package(manifest_path)
+            self.assertEqual(package.layers[0].generation_mode, "single")
+            self.assertIsNone(package.layers[0].mask_path)
+            self.assertEqual(len(package.layers[0].single_instances), 2)
 
 
 if __name__ == "__main__":

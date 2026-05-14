@@ -34,13 +34,17 @@ class TerrainTab(QWidget):
     def terrain_service(self) -> TerrainService:
         return self._service
 
-    def save_heightfield(self) -> None:
+    def save_heightfield(self, emit_signal: bool = True) -> None:
         path = self._resolve_heightfield_path()
-        self._service.save_to_path(path)
-        self._service.settings.heightfield_path = str(path.resolve())
+        if self._service.dirty or not path.exists():
+            self._service.save_to_path(path)
+        serialized = self._serialize_heightfield_path(path)
+        changed = self._service.settings.heightfield_path != serialized or not self._service.settings.enabled
+        self._service.settings.heightfield_path = serialized
         self._service.settings.enabled = True
         self._settings_panel.populate_from_settings(self._service.settings)
-        self.terrain_state_changed.emit(self._service.settings)
+        if emit_signal and changed:
+            self.terrain_state_changed.emit(self._service.settings)
 
     def set_project_dir(self, project_dir: str) -> None:
         self._project_dir = Path(project_dir) if project_dir else None

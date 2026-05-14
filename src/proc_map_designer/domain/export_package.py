@@ -4,11 +4,12 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
-EXPORT_PACKAGE_SCHEMA_VERSION = 3
+EXPORT_PACKAGE_SCHEMA_VERSION = 5
 
 
 @dataclass(slots=True)
 class ExportLayerSettings:
+    mode: str
     density: float
     min_distance: float
     allow_overlap: bool
@@ -17,9 +18,11 @@ class ExportLayerSettings:
     rotation_random_z: float
     seed: int
     priority: int
+    bounding_radius: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
+            "mode": self.mode,
             "density": self.density,
             "min_distance": self.min_distance,
             "allow_overlap": self.allow_overlap,
@@ -28,6 +31,7 @@ class ExportLayerSettings:
             "rotation_random_z": self.rotation_random_z,
             "seed": self.seed,
             "priority": self.priority,
+            "bounding_radius": self.bounding_radius,
         }
 
 
@@ -37,7 +41,9 @@ class ExportLayer:
     name: str
     blender_collection: str
     enabled: bool
-    mask_path: str
+    generation_mode: str
+    mask_path: str | None
+    single_instances: list["ExportSingleInstancePlacement"]
     settings: ExportLayerSettings
 
     def to_dict(self) -> dict[str, Any]:
@@ -46,8 +52,26 @@ class ExportLayer:
             "name": self.name,
             "blender_collection": self.blender_collection,
             "enabled": self.enabled,
+            "generation_mode": self.generation_mode,
             "mask_path": self.mask_path,
+            "single_instances": [placement.to_dict() for placement in self.single_instances],
             "settings": self.settings.to_dict(),
+        }
+
+
+@dataclass(slots=True)
+class ExportSingleInstancePlacement:
+    x: float
+    y: float
+    rotation_z_deg: float
+    scale: float
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "x": self.x,
+            "y": self.y,
+            "rotation_z_deg": self.rotation_z_deg,
+            "scale": self.scale,
         }
 
 

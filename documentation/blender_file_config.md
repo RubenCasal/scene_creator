@@ -6,7 +6,7 @@ This guide explains how to structure your `.blend` asset library so that MAPaint
 
 ## Overview
 
-The app does not create or modify your 3D models. Instead, it reads a `.blend` file you prepare in advance and uses **Blender's collection system** as a catalogue of placeable asset groups. When you run generation, the app instructs Blender (headlessly) to instance objects from those collections according to the painted masks.
+The app does not create or modify your 3D models. Instead, it reads a `.blend` file you prepare in advance and uses **Blender's collection system** as a catalogue of placeable asset groups. When you run generation, the app instructs Blender (headlessly) to instance objects from those collections according to either painted masks or explicit single-instance placements.
 
 Think of your `.blend` file as a **library** — you organise assets inside it, and the app reads that organisation to populate the layer panel.
 
@@ -105,21 +105,11 @@ Objects inside an asset group collection should be placed **at the world origin*
 
 ---
 
-## Base Terrain Plane (optional)
+## Base Terrain Plane (optional legacy concept)
 
-If your map has uneven terrain, you can include a **base plane mesh** in your `.blend` that represents the ground surface. The app can use it to:
+Current MAPaint terrain generation uses the app-generated runtime terrain plane plus the sculpted heightfield/material pipeline. You do **not** need to provide a special terrain mesh in your source `.blend` for normal terrain workflows.
 
-- Align placed objects to the terrain surface
-- Compute height offsets for instances
-
-The base plane must be:
-
-- A single **MESH** object (not a subdivision modifier without applying, not a NURBS surface)
-- Visible in the scene (not hidden)
-- Named clearly so you can identify it in the app's dropdown (e.g. `terrain_base`, `ground_plane`)
-- Large enough to cover the full logical map extent
-
-If you are not using terrain, leave this blank — the app places all objects at a flat Z = 0.
+The important requirement for your source `.blend` is still the same: collection structure and object scale must be correct.
 
 ---
 

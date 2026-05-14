@@ -19,6 +19,7 @@ from proc_map_designer.domain.project_state import (
     RoadPoint,
     RoadState,
     RoadStyleSettings,
+    SingleInstancePlacement,
 )
 from proc_map_designer.services.export_package_service import ExportPackageError, ExportPackageService
 
@@ -72,7 +73,7 @@ class ExportPackageServiceTests(unittest.TestCase):
             self.assertTrue(project_json_path.exists())
             payload = json.loads(project_json_path.read_text(encoding="utf-8"))
 
-            self.assertEqual(payload["schema_version"], 3)
+            self.assertEqual(payload["schema_version"], 5)
             self.assertEqual(payload["project_id"], project.project_id)
             self.assertEqual(payload["source_blend"], "/tmp/source.blend")
             self.assertEqual(payload["blender_executable"], "/usr/bin/blender")
@@ -88,6 +89,7 @@ class ExportPackageServiceTests(unittest.TestCase):
             self.assertEqual(layer["category"], "vegetation")
             self.assertEqual(layer["name"], "Pino")
             self.assertEqual(layer["blender_collection"], "vegetation/pino")
+            self.assertEqual(layer["generation_mode"], "procedural")
             self.assertEqual(layer["mask_path"], "masks/000_vegetation_pino.png")
             # seed de capa ausente => fallback a seed global de proyecto
             self.assertEqual(layer["settings"]["seed"], 77)
@@ -158,6 +160,36 @@ class ExportPackageServiceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             with self.assertRaises(ExportPackageError):
                 service.export_package(project, Path(temp_dir), lambda _root, _layer_ids: {})
+
+    def test_single_instance_layer_exports_without_mask(self) -> None:
+        service = ExportPackageService()
+        project = ProjectState.create_new(
+            source_blend="/tmp/source.blend",
+            blender_executable="/usr/bin/blender",
+            output_blend="/tmp/output.blend",
+        )
+        project.layers = [
+            LayerState(
+                layer_id="building/house",
+                name="House",
+                generation_settings=LayerGenerationSettings(
+                    mode="single",
+                    single_instances=[
+                        SingleInstancePlacement(x=1.0, y=2.0, rotation_z_deg=15.0, scale=0.8),
+                        SingleInstancePlacement(x=4.0, y=6.0, rotation_z_deg=25.0, scale=1.1),
+                    ],
+                ),
+            )
+        ]
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path = service.export_package(project, Path(temp_dir), lambda _root, _layer_ids: {})
+            payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+            layer = payload["layers"][0]
+            self.assertEqual(layer["generation_mode"], "single")
+            self.assertIsNone(layer["mask_path"])
+            self.assertEqual(len(layer["single_instances"]), 2)
+            self.assertEqual(layer["single_instances"][0]["x"], 1.0)
 
     def test_export_uses_stable_derived_seed_when_randomize_seed_is_enabled(self) -> None:
         service = ExportPackageService()

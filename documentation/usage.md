@@ -31,7 +31,6 @@ Click **Select .blend** and choose your asset library file. See [Blender File Co
 Once selected, the app runs a **headless Blender inspection** in the background. The log panel at the bottom shows its progress. When inspection completes:
 
 - The collection tree is populated with all discovered asset groups
-- Available base-plane candidates (terrain mesh objects) are listed in the dropdown
 
 If the inspection fails, check the log panel for the error message — the most common causes are an incorrect Blender path or a `.blend` file that has no collections under Scene Collection.
 
@@ -45,16 +44,7 @@ Click **Map Settings** or fill in the fields directly:
 | **Mask width / height** | Resolution of the internal raster masks in pixels. Higher resolution = finer painting detail but larger files and slower export. 1024 × 1024 is a good default. |
 | **Unit** | Label for the logical unit (m, km, cm — for display only, does not affect scale). |
 
-### 1.4 Select a base terrain plane (optional)
-
-If your `.blend` contains a terrain mesh, select it from the **Base plane** dropdown. The generation backend will use this mesh to:
-
-- Lift placed objects to follow the terrain surface
-- Respect terrain slope limits (if configured per-layer)
-
-Leave this blank for completely flat scenes.
-
-### 1.5 Configure output path
+### 1.4 Configure output path
 
 Set the path where Blender should write the generated `working_map.blend`. You can type a path directly or click **Browse** to choose a location.
 
@@ -64,7 +54,7 @@ When you are satisfied with the setup, click **Next →** to proceed to the Pain
 
 ## Step 2 — Paint
 
-This is where you define _where_ each asset type appears on the map by painting grayscale masks.
+This is where you define _where_ each asset type appears on the map by painting grayscale masks or placing explicit single instances.
 
 ### 2.1 Understanding the canvas
 
@@ -76,7 +66,12 @@ The canvas shows a top-down view of your logical map. Each layer in the panel on
 
 ### 2.2 Selecting a layer
 
-Click on a layer name in the left panel to make it the active painting target. The layer's current mask is shown on the canvas. You can paint on only one layer at a time.
+Click on a layer name in the left panel to make it the active target. You can work on only one layer at a time.
+
+Each layer has a **Mode** selector in the Paint step:
+
+- **Procedural** — paint a grayscale mask as before
+- **Single Instance** — place square markers; each square generates exactly one object
 
 ### 2.3 Brush tools
 
@@ -101,15 +96,26 @@ Use low intensity and multiple passes to create natural gradual transitions betw
 
 You can toggle layer visibility in the layer panel to see how different masks overlap. The canvas shows the active layer's mask overlaid on a faint preview of the logical map boundary.
 
-### 2.5 Roads (optional)
+### 2.5 Single Instance mode
 
-Switch to the **Roads** tab in the layer panel to place road paths on the map.
+When a layer is set to **Single Instance**:
 
-- Click to add waypoints along the desired road path
-- Set the road **width** and **profile** (single lane or double lane)
+- **Left-click** adds a square marker
+- each square represents one generated object
+- **Right-click near a square** removes the nearest marker
+- scale and rotation are controlled from the Generate step parameters for that layer
+
+This mode is useful when you want to place specific objects once each instead of scattering them procedurally.
+
+### 2.6 Roads (optional)
+
+Select the **Road** item in the layer panel to place road paths on the map.
+
+- Draw directly in the canvas to create road strokes
+- Set the road **scale** and **profile** (single or double)
 - Roads are generated procedurally using Blender's curve system — you do not need to model road geometry yourself
 
-### 2.6 Terrain sculpting (optional)
+### 2.7 Terrain sculpting (optional)
 
 If the **Terrain** tab is available and terrain is enabled in your project settings, you can sculpt a heightfield directly in the app's 3D terrain viewport:
 
@@ -117,7 +123,7 @@ If the **Terrain** tab is available and terrain is enabled in your project setti
 - Set **Max height** to control the overall vertical scale
 - Save the heightfield as a PNG to include it in the export package
 
-When you are satisfied with the painted masks, click **Next →** to proceed to Generate.
+When you are satisfied with the painted masks, single-instance markers, roads, or terrain, click **Next →** to proceed to Generate.
 
 ---
 
@@ -127,28 +133,32 @@ When you are satisfied with the painted masks, click **Next →** to proceed to 
 
 Before generating, configure how each layer's assets are placed. Select a layer in the list and adjust its settings in the right panel:
 
+| Parameter | Description |
+|---|---|
+| **Mode** | `Procedural` uses a mask-driven scatter workflow. `Single Instance` uses one generated object per square marker placed in the Paint step. |
+
 #### Placement
 
 | Parameter | Description |
 |---|---|
 | **Enabled** | If unchecked, this layer is skipped during generation. |
-| **Density** | Number of instances per 100 logical units². A density of 1.0 on a 100 × 100 m map places approximately 100 instances over a fully painted region. |
+| **Density** | Number of instances per 100 logical units². Used only in `Procedural` mode. |
 | **Seed** | Fixed random seed for deterministic placement. Leave blank to randomise on each run. |
-| **Allow overlap** | If disabled, the placement algorithm enforces minimum distance between all instances, regardless of layer. |
-| **Min distance** | Minimum distance (in logical units) between any two instances of this layer. |
+| **Allow overlap** | If disabled, the placement algorithm enforces minimum distance between all instances. Used only in `Procedural` mode. |
+| **Min distance** | Minimum distance (in logical units) between any two instances of this layer. Used only in `Procedural` mode. |
 | **Priority** | Layers with higher priority are placed first. Lower-priority layers then fill in around them, respecting min-distance rules. |
 
 #### Scale
 
 | Parameter | Description |
 |---|---|
-| **Scale min / max** | Each placed instance gets a random uniform scale multiplier in this range. `1.0 / 1.0` = no scale variation. `0.8 / 1.2` = ±20% random scale. |
+| **Scale min / max** | In `Procedural`, each placed instance gets a random uniform scale multiplier in this range. In `Single Instance`, the layer uses one explicit scale for all placed squares. |
 
 #### Rotation
 
 | Parameter | Description |
 |---|---|
-| **Rotation random Z** | Maximum random Z-axis rotation in degrees. `180` = fully random rotation. `0` = all instances face the same direction. |
+| **Rotation random Z** | In `Procedural`, this is the random Z-axis rotation range. In `Single Instance`, it becomes the explicit rotation applied to all squares in that layer. |
 
 ### 3.2 Choosing a generation backend
 
@@ -156,7 +166,7 @@ Select the backend from the **Backend** dropdown:
 
 #### Python Batch (default — recommended)
 
-- Reads the painted masks and `project.json`
+- Reads the painted masks, single-instance placements, roads, terrain settings, and `project.json`
 - Runs a deterministic placement algorithm:
   - Samples candidate positions from mask intensity (denser paint = more candidates)
   - Filters candidates by min_distance, allow_overlap, slope_limit
@@ -167,7 +177,7 @@ Select the backend from the **Backend** dropdown:
 
 #### Geometry Nodes
 
-- Builds a point-cloud from the painted masks
+- Builds a point-cloud from procedural mask placements and single-instance placements
 - Instances collections through a Geometry Nodes modifier
 - Faster for very high instance counts
 - Instances are not individually placed objects — they remain GN instances
@@ -179,8 +189,8 @@ Select the backend from the **Backend** dropdown:
 Click **Generate** to start. The pipeline runs four stages in sequence:
 
 ```
-1. Export package   → Writes project.json and mask PNGs to the export directory
-2. Validation       → Headless Blender validates collections, masks, and terrain paths
+1. Export package   → Writes `project.json`, mask PNGs, and terrain assets to the export directory
+2. Validation       → Headless Blender validates collections, mask paths, single-instance payloads, roads, and terrain paths
 3. Generation       → Headless Blender places all instances and saves working_map.blend
 4. (Optional) Final export → Creates a clean final_map.blend with organised collections
 ```
@@ -204,7 +214,7 @@ Once generation completes, a **Open result** button appears. Click it to open `w
 
 ### 3.5 Iterating
 
-You can go back to the Paint step, adjust masks, return to Generate, and run again. The app re-exports the updated masks and re-runs the full pipeline. Previous working outputs are overwritten.
+You can go back to the Paint step, adjust masks, single-instance squares, roads, or terrain, return to Generate, and run again. The app re-exports the updated project state and re-runs the full pipeline. Previous working outputs are overwritten.
 
 ### 3.6 Final export
 
@@ -214,7 +224,7 @@ When you are satisfied with the result, click **Final Export** (from the menu or
 
 ## Project Save / Load
 
-Your project (all layer masks, settings, layer parameters, road paths, terrain data, and file paths) is saved in a single `.pmd` project file.
+Your project (all layer masks, single-instance placements, settings, road paths, terrain data, and file paths) is saved in a single project JSON file.
 
 - **Save project**: `File → Save` or `Ctrl+S`
 - **Save as**: `File → Save As`

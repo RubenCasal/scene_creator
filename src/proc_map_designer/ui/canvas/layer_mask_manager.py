@@ -14,7 +14,12 @@ from proc_map_designer.domain.layer_palette import (
     variant_color_for_sibling,
 )
 from proc_map_designer.domain.models import CollectionNode
-from proc_map_designer.domain.project_state import LayerGenerationSettings, LayerState, MapSettings
+from proc_map_designer.domain.project_state import (
+    LayerGenerationSettings,
+    LayerState,
+    MapSettings,
+    SingleInstancePlacement,
+)
 from proc_map_designer.ui.canvas.brush_tool import BrushTool
 
 
@@ -33,6 +38,7 @@ class LayerMask:
     mask_data_path: str | None = None
     generation_settings: LayerGenerationSettings = field(default_factory=LayerGenerationSettings)
     mask_image: QImage | None = None
+    mask_has_content: bool = False
 
 
 class LayerMaskManager:
@@ -52,21 +58,19 @@ class LayerMaskManager:
         return self._layers.get(layer_id)
 
     def set_map_settings(self, map_settings: MapSettings) -> None:
-        old_width = self._map_settings.mask_width
-        old_height = self._map_settings.mask_height
         self._map_settings = map_settings
-
-        if (old_width, old_height) == (map_settings.mask_width, map_settings.mask_height):
-            return
 
         for layer in self._layers.values():
             mask = layer.mask_image or self._new_empty_mask()
-            layer.mask_image = mask.scaled(
-                map_settings.mask_width,
-                map_settings.mask_height,
-                Qt.AspectRatioMode.IgnoreAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
-            )
+            if mask.width() != map_settings.mask_width or mask.height() != map_settings.mask_height:
+                layer.mask_image = mask.scaled(
+                    map_settings.mask_width,
+                    map_settings.mask_height,
+                    Qt.AspectRatioMode.IgnoreAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+            else:
+                layer.mask_image = mask
 
     def sync_from_collection_tree(self, roots: list[CollectionNode]) -> None:
         layer_paths = self._extract_layer_paths(roots)
@@ -95,8 +99,9 @@ class LayerMaskManager:
                 visible=layer_state.visible,
                 opacity=layer_state.opacity,
                 mask_data_path=layer_state.mask_data_path,
-                generation_settings=layer_state.generation_settings,
+                generation_settings=LayerGenerationSettings.from_dict(layer_state.generation_settings.to_dict()),
                 mask_image=mask,
+                mask_has_content=self._image_has_alpha(mask),
             )
             self._layers[layer.layer_id] = layer
             self._order.append(layer.layer_id)
@@ -118,6 +123,7 @@ class LayerMaskManager:
                 display_name=path,
                 color_hex=variant_color_for_sibling(category, sibling_index),
                 mask_image=self._new_empty_mask(),
+                mask_has_content=False,
             )
             self._order.append(path)
 
@@ -126,12 +132,42 @@ class LayerMaskManager:
         if layer is None:
             return
         layer.mask_image = self._new_empty_mask()
+        layer.mask_has_content = False
+        layer.generation_settings.single_instances = []
 
     def set_layer_visibility(self, layer_id: str, visible: bool) -> None:
         layer = self._layers.get(layer_id)
         if layer is None:
             return
         layer.visible = visible
+
+    def get_single_instances(self, layer_id: str) -> list[SingleInstancePlacement]:
+        layer = self._layers.get(layer_id)
+        if layer is None:
+            return []
+        return list(layer.generation_settings.single_instances)
+
+    def add_single_instance(self, layer_id: str, placement: SingleInstancePlacement) -> bool:
+        layer = self._layers.get(layer_id)
+        if layer is None:
+            return False
+        layer.generation_settings.single_instances.append(placement)
+        return True
+
+    def remove_single_instance_at_index(self, layer_id: str, index: int) -> bool:
+        layer = self._layers.get(layer_id)
+        if layer is None:
+            return False
+        if not (0 <= index < len(layer.generation_settings.single_instances)):
+            return False
+        layer.generation_settings.single_instances.pop(index)
+        return True
+
+    def layer_mode(self, layer_id: str) -> str:
+        layer = self._layers.get(layer_id)
+        if layer is None:
+            return "procedural"
+        return layer.generation_settings.mode
 
     def paint_stroke(
         self,
@@ -150,6 +186,10 @@ class LayerMaskManager:
         start_mask = self._scene_to_mask_point(start_scene)
         end_mask = self._scene_to_mask_point(end_scene)
         brush.paint_segment(layer.mask_image, start_mask, end_mask)
+        if brush.mode == "paint":
+            layer.mask_has_content = True
+        else:
+            layer.mask_has_content = self._image_has_alpha(layer.mask_image)
         return True
 
     def to_layer_states(self, project_dir: Path) -> list[LayerState]:
@@ -205,15 +245,21 @@ class LayerMaskManager:
         mask = layer.mask_image
         if mask is None or mask.isNull():
             return False
-        source = mask.convertToFormat(QImage.Format.Format_ARGB32)
-        for y in range(source.height()):
-            for x in range(source.width()):
-                if source.pixelColor(x, y).alpha() > 0:
-                    return True
-        return False
+        return layer.mask_has_content
 
     def painted_layer_ids(self) -> list[str]:
         return [layer_id for layer_id in self._order if self.has_paint_data(layer_id)]
+
+    def has_layer_content(self, layer_id: str) -> bool:
+        layer = self._layers.get(layer_id)
+        if layer is None:
+            return False
+        if layer.generation_settings.mode == "single":
+            return len(layer.generation_settings.single_instances) > 0
+        return self.has_paint_data(layer_id)
+
+    def content_layer_ids(self) -> list[str]:
+        return [layer_id for layer_id in self._order if self.has_layer_content(layer_id)]
 
     def export_grayscale_masks(self, package_dir: Path, layer_order: list[str]) -> dict[str, str]:
         snapshots = self.capture_mask_snapshots(layer_order)
@@ -340,6 +386,7 @@ class LayerMaskManager:
                 layer = old_layers[path]
                 if layer.mask_image is None:
                     layer.mask_image = self._new_empty_mask()
+                    layer.mask_has_content = False
                 if not is_valid_hex_color(layer.color_hex):
                     category, _ = split_layer_id(path)
                     sibling_index = max(0, category_counts.get(category, 1) - 1)
@@ -359,8 +406,20 @@ class LayerMaskManager:
                 opacity=0.85,
                 mask_data_path=None,
                 mask_image=self._new_empty_mask(),
+                mask_has_content=False,
             )
             self._order.append(path)
+
+    @staticmethod
+    def _image_has_alpha(mask: QImage | None) -> bool:
+        if mask is None or mask.isNull():
+            return False
+        source = mask.convertToFormat(QImage.Format.Format_ARGB32)
+        for y in range(source.height()):
+            for x in range(source.width()):
+                if source.pixelColor(x, y).alpha() > 0:
+                    return True
+        return False
 
     def _extract_layer_paths(self, roots: list[CollectionNode]) -> list[str]:
         paths: list[str] = []

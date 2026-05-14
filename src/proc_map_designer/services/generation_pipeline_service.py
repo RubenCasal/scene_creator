@@ -3,13 +3,14 @@ from __future__ import annotations
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Sequence
+from typing import Callable, Mapping, Sequence, Any
 
 from proc_map_designer.domain.project_state import LatestOutputInfo, ProjectState, utc_now_iso
 from proc_map_designer.infrastructure.blender_runner import BlenderExecutionError, BlenderRunner
 from proc_map_designer.services.export_package_service import ExportPackageService
 from proc_map_designer.services.final_export_service import FinalExportService, FinalExportServiceError
 from proc_map_designer.services.generation_service import GenerationResult, GenerationService, GenerationServiceError
+from proc_map_designer.services.local_validation_service import LocalValidationResult, LocalValidationService
 from proc_map_designer.services.validation_service import ValidationReport, ValidationService, ValidationServiceError
 
 MaskExporter = Callable[[Path, Sequence[str]], dict[str, str]]
@@ -71,22 +72,59 @@ class GenerationPipelineService:
         state: StateCallback | None = None,
     ) -> LatestOutputInfo:
         self._get_backend(backend_id)
+        return self.commit_design(
+            project=project,
+            package_dir=package_dir,
+            mask_exporter=mask_exporter,
+            local_validator=LocalValidationService(),
+            backend_id=backend_id,
+            deep_validate=True,
+            log=log,
+            state=state,
+        )
+
+    def commit_design(
+        self,
+        project: ProjectState,
+        package_dir: Path,
+        mask_exporter: MaskExporter,
+        local_validator: LocalValidationService,
+        backend_id: str,
+        mask_snapshots: Mapping[str, Any] | None = None,
+        deep_validate: bool = False,
+        log: LogCallback | None = None,
+        state: StateCallback | None = None,
+    ) -> LatestOutputInfo:
+        self._get_backend(backend_id)
+        if state:
+            state("local_validating")
+        local_result = local_validator.validate(project, mask_snapshots or {})
+        if log:
+            for warning in local_result.warnings:
+                log(f"Warning: {warning}")
+        if not local_result.success:
+            raise GenerationPipelineError("; ".join(local_result.errors))
         if state:
             state("exporting")
         manifest_path = self._export_project(project, package_dir, mask_exporter, log)
-        if state:
-            state("validating")
-        report = self._validate_manifest(manifest_path, log)
+        warnings = list(local_result.warnings)
+        status = "committed"
+        if deep_validate:
+            if state:
+                state("validating")
+            report = self._validate_manifest(manifest_path, log)
+            warnings.extend(report.warnings)
+            status = "validated"
         return LatestOutputInfo(
             backend_id=backend_id,
-            status="validated",
+            status=status,
             export_manifest_path=str(manifest_path),
             result_path="",
             completed_at=utc_now_iso(),
             used_layer_ids=[layer.layer_id for layer in project.layers if layer.generation_settings.enabled]
             + [road.road_id for road in project.roads if road.generator.enabled and road.visible]
             + (["terrain/base_plane"] if project.terrain_settings.enabled else []),
-            validation_warnings=list(report.warnings),
+            validation_warnings=warnings,
         )
 
     def generate_project(
@@ -95,6 +133,7 @@ class GenerationPipelineService:
         package_dir: Path,
         mask_exporter: MaskExporter,
         backend_id: str,
+        skip_validation: bool = False,
         log: LogCallback | None = None,
         state: StateCallback | None = None,
     ) -> LatestOutputInfo:
@@ -102,9 +141,13 @@ class GenerationPipelineService:
         if state:
             state("exporting")
         manifest_path = self._export_project(project, package_dir, mask_exporter, log)
-        if state:
-            state("validating")
-        report = self._validate_manifest(manifest_path, log)
+        report = ValidationReport(success=True)
+        if not skip_validation:
+            if state:
+                state("validating")
+            report = self._validate_manifest(manifest_path, log)
+        elif log:
+            log("Skipping Blender validation (already validated, no changes since).")
         if state:
             state("generating")
         result = self._generate_manifest(manifest_path, backend_id, project, log)
@@ -112,6 +155,37 @@ class GenerationPipelineService:
             for warning in result.warnings:
                 log(f"Warning: {warning}")
 
+        return LatestOutputInfo(
+            backend_id=backend_id,
+            status="completed",
+            export_manifest_path=str(manifest_path),
+            result_path=result.output_blend,
+            completed_at=utc_now_iso(),
+            used_layer_ids=[entry["layer_id"] for entry in result.placed_layers if "layer_id" in entry],
+            validation_warnings=list(report.warnings),
+        )
+
+    def generate_only(
+        self,
+        manifest_path: Path,
+        backend_id: str,
+        project: ProjectState,
+        log: LogCallback | None = None,
+        state: StateCallback | None = None,
+        validate_first: bool = False,
+    ) -> LatestOutputInfo:
+        self._get_backend(backend_id)
+        report = ValidationReport(success=True)
+        if validate_first:
+            if state:
+                state("validating")
+            report = self._validate_manifest(manifest_path, log)
+        if state:
+            state("generating")
+        result = self._generate_manifest(manifest_path, backend_id, project, log)
+        if result.warnings and log is not None:
+            for warning in result.warnings:
+                log(f"Warning: {warning}")
         return LatestOutputInfo(
             backend_id=backend_id,
             status="completed",

@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 import html
 from pathlib import Path
+from typing import Mapping
 
 from PySide6.QtCore import QObject, QRectF, Qt, QThread, Signal, Slot
 from PySide6.QtGui import QAction, QCloseEvent, QColor, QFont, QIcon, QPainter, QPixmap
@@ -40,13 +41,14 @@ from PySide6.QtWidgets import (
 )
 
 from proc_map_designer.domain.models import BlendInspectionResult
-from proc_map_designer.domain.project_state import LatestOutputInfo, ProjectState, utc_now_iso
+from proc_map_designer.domain.project_state import LatestOutputInfo, MapSettings, ProjectState, utc_now_iso
 from proc_map_designer.infrastructure.settings import AppSettings
 from proc_map_designer.services.generation_pipeline_service import (
     GenerationPipelineError,
     GenerationPipelineService,
 )
 from proc_map_designer.services.inspection_service import BlendInspectionError, BlendInspectionService
+from proc_map_designer.services.local_validation_service import LocalValidationService
 from proc_map_designer.services.project_service import ProjectService, ProjectServiceError
 from proc_map_designer.services.terrain_material_catalog import (
     TerrainMaterialCatalog,
@@ -122,6 +124,8 @@ class PipelineWorker(QObject):
         package_dir: Path,
         backend_id: str,
         mask_exporter,
+        local_validator: LocalValidationService,
+        local_mask_snapshots: Mapping[str, object],
         latest_output: LatestOutputInfo | None = None,
         destination_path: Path | None = None,
     ) -> None:
@@ -132,18 +136,23 @@ class PipelineWorker(QObject):
         self._package_dir = package_dir
         self._backend_id = backend_id
         self._mask_exporter = mask_exporter
+        self._local_validator = local_validator
+        self._local_mask_snapshots = local_mask_snapshots
         self._latest_output = latest_output
         self._destination_path = destination_path
 
     @Slot()
     def run(self) -> None:
         try:
-            if self._operation == "validate":
-                result = self._pipeline_service.validate_project(
+            if self._operation == "commit":
+                result = self._pipeline_service.commit_design(
                     self._project_state,
                     self._package_dir,
                     self._mask_exporter,
+                    self._local_validator,
                     self._backend_id,
+                    mask_snapshots=self._local_mask_snapshots,
+                    deep_validate=True,
                     log=self.log.emit,
                     state=self.state_changed.emit,
                 )
@@ -153,8 +162,29 @@ class PipelineWorker(QObject):
                     self._package_dir,
                     self._mask_exporter,
                     self._backend_id,
+                    skip_validation=False,
                     log=self.log.emit,
                     state=self.state_changed.emit,
+                )
+            elif self._operation == "generate_only":
+                manifest_path = Path(self._project_state.commit_state.manifest_path or "")
+                result = self._pipeline_service.generate_only(
+                    manifest_path=manifest_path,
+                    backend_id=self._backend_id,
+                    project=self._project_state,
+                    log=self.log.emit,
+                    state=self.state_changed.emit,
+                    validate_first=False,
+                )
+            elif self._operation == "validate_then_generate":
+                manifest_path = Path(self._project_state.commit_state.manifest_path or "")
+                result = self._pipeline_service.generate_only(
+                    manifest_path=manifest_path,
+                    backend_id=self._backend_id,
+                    project=self._project_state,
+                    log=self.log.emit,
+                    state=self.state_changed.emit,
+                    validate_first=True,
                 )
             elif self._operation == "final_export":
                 if self._latest_output is None or self._destination_path is None:
@@ -221,6 +251,7 @@ class MainWindow(QMainWindow):
         self._active_worker: InspectionWorker | None = None
         self._pipeline_thread: QThread | None = None
         self._pipeline_worker: PipelineWorker | None = None
+        self._current_pipeline_operation: str | None = None
         self._current_blend: Path | None = None
         self._project_state: ProjectState = self._project_service.create_new_project(
             blender_executable=self._settings.get_blender_executable() or ""
@@ -268,8 +299,8 @@ class MainWindow(QMainWindow):
         self.action_configure_map = QAction("Map Settings", self)
         self.action_configure_map.triggered.connect(self._configure_map)
 
-        self.action_validate_pipeline = QAction("Validate", self)
-        self.action_validate_pipeline.triggered.connect(self._validate_pipeline)
+        self.action_validate_pipeline = QAction("Save & Validate", self)
+        self.action_validate_pipeline.triggered.connect(self._commit_design)
 
         self.action_generate = QAction("Generate", self)
         self.action_generate.triggered.connect(self._generate_pipeline)
@@ -476,12 +507,14 @@ class MainWindow(QMainWindow):
         form_layout.addRow("Map Height", self.setup_map_height_spin)
 
         self.setup_mask_width_spin = QSpinBox()
-        self.setup_mask_width_spin.setRange(1, 8192)
+        self.setup_mask_width_spin.setRange(64, 16384)
+        self.setup_mask_width_spin.setSingleStep(64)
         self.setup_mask_width_spin.editingFinished.connect(self._on_setup_map_changed)
         form_layout.addRow("Mask width", self.setup_mask_width_spin)
 
         self.setup_mask_height_spin = QSpinBox()
-        self.setup_mask_height_spin.setRange(1, 8192)
+        self.setup_mask_height_spin.setRange(64, 16384)
+        self.setup_mask_height_spin.setSingleStep(64)
         self.setup_mask_height_spin.editingFinished.connect(self._on_setup_map_changed)
         form_layout.addRow("Mask height", self.setup_mask_height_spin)
 
@@ -574,7 +607,18 @@ class MainWindow(QMainWindow):
         self.layer_tree.itemSelectionChanged.connect(self._on_layer_selection_changed)
         tree_layout.addWidget(self.layer_tree, stretch=1)
 
+        self.paint_layer_mode_label = QLabel("Mode")
+        self.paint_layer_mode_label.setProperty("secondary", True)
+        tree_layout.addWidget(self.paint_layer_mode_label)
+        self.paint_layer_mode_combo = QComboBox()
+        self.paint_layer_mode_combo.addItem("Procedural", "procedural")
+        self.paint_layer_mode_combo.addItem("Single Instance", "single")
+        self.paint_layer_mode_combo.currentIndexChanged.connect(self._on_paint_layer_mode_changed)
+        self.paint_layer_mode_combo.setEnabled(False)
+        tree_layout.addWidget(self.paint_layer_mode_combo)
+
         brush_group = QGroupBox("Brush")
+        brush_group.setMaximumHeight(150)
         controls_layout = QVBoxLayout(brush_group)
         controls_layout.setSpacing(8)
 
@@ -612,6 +656,7 @@ class MainWindow(QMainWindow):
         controls_layout.addLayout(mode_layout)
 
         self.road_group = QGroupBox("Road")
+        self.road_group.setMaximumHeight(190)
         road_layout = QVBoxLayout(self.road_group)
         road_layout.setSpacing(8)
         self.road_width_label = QLabel(f"Road Scale  {DEFAULT_ROAD_SCALE}")
@@ -667,10 +712,14 @@ class MainWindow(QMainWindow):
 
         nav_layout = QHBoxLayout()
         self.paint_back_button = QPushButton("← Setup")
+        self.paint_back_button.setMinimumHeight(44)
+        self.paint_back_button.setMinimumWidth(150)
         self.paint_back_button.clicked.connect(lambda: self._set_workflow_step(0))
         nav_layout.addWidget(self.paint_back_button)
         nav_layout.addStretch(1)
         self.paint_next_button = QPushButton("→ Generate")
+        self.paint_next_button.setMinimumHeight(44)
+        self.paint_next_button.setMinimumWidth(150)
         self.paint_next_button.clicked.connect(self._go_to_generate_step)
         nav_layout.addWidget(self.paint_next_button)
         layout.addLayout(nav_layout)
@@ -690,13 +739,13 @@ class MainWindow(QMainWindow):
         left_layout = QVBoxLayout(left_panel)
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(8)
-        left_layout.addWidget(QLabel("Painted Layers"))
+        left_layout.addWidget(QLabel("Active Layers"))
 
         self.painted_layers_list = QListWidget()
         self.painted_layers_list.currentItemChanged.connect(self._on_parameter_layer_changed)
         left_layout.addWidget(self.painted_layers_list, stretch=1)
 
-        self.painted_layers_summary = QLabel("No painted layers yet.")
+        self.painted_layers_summary = QLabel("No active layers yet.")
         self.painted_layers_summary.setWordWrap(True)
         left_layout.addWidget(self.painted_layers_summary)
         body_splitter.addWidget(left_panel)
@@ -714,6 +763,12 @@ class MainWindow(QMainWindow):
         self.param_enabled_check = QCheckBox("Generate this layer")
         self.param_enabled_check.toggled.connect(self._apply_parameter_form)
         form_layout.addRow("Enabled", self.param_enabled_check)
+
+        self.param_mode_combo = QComboBox()
+        self.param_mode_combo.addItem("Procedural", "procedural")
+        self.param_mode_combo.addItem("Single Instance", "single")
+        self.param_mode_combo.currentIndexChanged.connect(self._apply_parameter_form)
+        form_layout.addRow("Mode", self.param_mode_combo)
 
         self.param_density_spin = QDoubleSpinBox()
         self.param_density_spin.setRange(0.0, 100000.0)
@@ -766,14 +821,20 @@ class MainWindow(QMainWindow):
 
         nav_layout = QHBoxLayout()
         self.generate_back_button = QPushButton("← Paint")
+        self.generate_back_button.setMinimumHeight(44)
+        self.generate_back_button.setMinimumWidth(150)
         self.generate_back_button.clicked.connect(lambda: self._set_workflow_step(1))
         nav_layout.addWidget(self.generate_back_button)
         nav_layout.addStretch(1)
-        self.validate_button = QPushButton("🔍 Validate")
-        self.validate_button.clicked.connect(self._validate_pipeline)
+        self.validate_button = QPushButton("💾 Save & Validate")
+        self.validate_button.setMinimumHeight(44)
+        self.validate_button.setMinimumWidth(150)
+        self.validate_button.clicked.connect(self._commit_design)
         nav_layout.addWidget(self.validate_button)
         self.generate_button = QPushButton("▶ Generate")
         self.generate_button.setProperty("accent", True)
+        self.generate_button.setMinimumHeight(44)
+        self.generate_button.setMinimumWidth(150)
         self.generate_button.clicked.connect(self._generate_pipeline)
         nav_layout.addWidget(self.generate_button)
         layout.addLayout(nav_layout)
@@ -787,8 +848,10 @@ class MainWindow(QMainWindow):
         self.canvas_view.set_map_settings(self._project_state.map_settings)
         self.canvas_view.set_road_width(float(self.road_width_slider.value()))
         self.canvas_view.set_road_profile(str(self.road_profile_combo.currentData()))
+        self.canvas_view.set_single_instance_defaults(scale=1.0, rotation_z_deg=0.0)
         self.canvas_view.mask_modified.connect(self._on_mask_modified)
         self.canvas_view.road_modified.connect(self._on_road_modified)
+        self.canvas_view.single_instance_modified.connect(self._on_single_instance_modified)
 
     def _populate_backend_choices(self) -> None:
         self.backend_combo.blockSignals(True)
@@ -845,22 +908,20 @@ class MainWindow(QMainWindow):
         if not self._project_state.collection_tree:
             QMessageBox.information(self, "Inspection Required", "Wait until the .blend inspection finishes.")
             return
-        painted_layer_ids = self._layer_manager.painted_layer_ids()
-        if not painted_layer_ids and not self._road_manager.has_roads():
-            QMessageBox.information(
-                self,
-                "No Content",
-                "Paint at least one layer or draw a road before continuing to the Generate step.",
-            )
-            return
         self._refresh_painted_layers_ui()
         self._set_workflow_step(2)
 
     def _on_setup_map_changed(self) -> None:
-        self._project_state.map_settings.logical_width = float(self.setup_map_width_spin.value())
-        self._project_state.map_settings.logical_height = float(self.setup_map_height_spin.value())
-        self._project_state.map_settings.mask_width = int(self.setup_mask_width_spin.value())
-        self._project_state.map_settings.mask_height = int(self.setup_mask_height_spin.value())
+        current = self._project_state.map_settings
+        self._project_state.map_settings = MapSettings(
+            logical_width=float(self.setup_map_width_spin.value()),
+            logical_height=float(self.setup_map_height_spin.value()),
+            logical_unit=current.logical_unit,
+            mask_width=int(self.setup_mask_width_spin.value()),
+            mask_height=int(self.setup_mask_height_spin.value()),
+            base_plane_object=current.base_plane_object,
+            terrain_material_id=current.terrain_material_id,
+        )
         self._project_state.touch()
         self._layer_manager.set_map_settings(self._project_state.map_settings)
         self._road_manager.set_map_settings(self._project_state.map_settings)
@@ -869,17 +930,26 @@ class MainWindow(QMainWindow):
         self._refresh_map_summary_label()
 
     def _refresh_painted_layers_ui(self) -> None:
-        painted_ids = self._layer_manager.painted_layer_ids()
+        layer_ids = [layer.layer_id for layer in self._layer_manager.all_layers()]
         self.painted_layers_list.blockSignals(True)
         self.painted_layers_list.clear()
         disabled_count = 0
-        for layer_id in painted_ids:
+        content_count = 0
+        for layer_id in layer_ids:
             layer = self._layer_manager.get_layer(layer_id)
             settings = layer.generation_settings if layer is not None else None
             enabled = bool(settings.enabled) if settings is not None else False
             if not enabled:
                 disabled_count += 1
-            density_text = f"density: {settings.density:.3f}" if settings is not None else "density: -"
+            has_content = self._layer_manager.has_layer_content(layer_id)
+            if has_content:
+                content_count += 1
+            if settings is not None and settings.mode == "single":
+                density_text = "single placed" if has_content else "single: no placement"
+            else:
+                density_text = (
+                    f"density: {settings.density:.3f}" if settings is not None and has_content else "procedural: no mask"
+                )
             prefix = "✓" if enabled else "✗"
             item = QListWidgetItem(f"{prefix} {layer_id}    {density_text}")
             item.setData(Qt.ItemDataRole.UserRole, layer_id)
@@ -887,11 +957,11 @@ class MainWindow(QMainWindow):
         self.painted_layers_list.blockSignals(False)
 
         self.painted_layers_summary.setText(
-            (f"{len(painted_ids)} layers · {disabled_count} disabled" if painted_ids else "No painted layers yet.")
+            (f"{len(layer_ids)} layers · {content_count} with content · {disabled_count} disabled" if layer_ids else "No layers available.")
         )
 
-        if painted_ids:
-            selected_id = self._parameter_layer_id if self._parameter_layer_id in painted_ids else painted_ids[0]
+        if layer_ids:
+            selected_id = self._parameter_layer_id if self._parameter_layer_id in layer_ids else layer_ids[0]
             for row in range(self.painted_layers_list.count()):
                 item = self.painted_layers_list.item(row)
                 if item.data(Qt.ItemDataRole.UserRole) == selected_id:
@@ -914,6 +984,7 @@ class MainWindow(QMainWindow):
         enabled = layer_id is not None
         widgets = [
             self.param_enabled_check,
+            self.param_mode_combo,
             self.param_density_spin,
             self.param_allow_overlap_check,
             self.param_min_distance_spin,
@@ -940,6 +1011,9 @@ class MainWindow(QMainWindow):
         settings = layer.generation_settings
         self.parameter_layer_label.setText(f"Layer: {layer_id}")
         self.param_enabled_check.setChecked(settings.enabled)
+        mode_index = self.param_mode_combo.findData(settings.mode)
+        if mode_index >= 0:
+            self.param_mode_combo.setCurrentIndex(mode_index)
         self.param_density_spin.setValue(settings.density)
         self.param_allow_overlap_check.setChecked(settings.allow_overlap)
         self.param_min_distance_spin.setValue(settings.min_distance)
@@ -948,6 +1022,15 @@ class MainWindow(QMainWindow):
         self.param_rotation_spin.setValue(settings.rotation_random_z)
         self.param_seed_spin.setValue(settings.seed or 0)
         self.param_priority_spin.setValue(settings.priority)
+        if settings.mode == "single" and settings.single_instances:
+            self.param_scale_min_spin.setValue(settings.single_instances[-1].scale)
+            self.param_scale_max_spin.setValue(settings.single_instances[-1].scale)
+            self.param_rotation_spin.setValue(settings.single_instances[-1].rotation_z_deg)
+        self.canvas_view.set_single_instance_defaults(
+            scale=float(self.param_scale_min_spin.value()),
+            rotation_z_deg=float(self.param_rotation_spin.value()),
+        )
+        self._refresh_parameter_form_mode(settings.mode, bool(settings.single_instances))
         self._updating_parameter_form = False
 
     def _apply_parameter_form(self) -> None:
@@ -959,17 +1042,59 @@ class MainWindow(QMainWindow):
 
         settings = layer.generation_settings
         settings.enabled = self.param_enabled_check.isChecked()
-        settings.density = float(self.param_density_spin.value())
-        settings.allow_overlap = self.param_allow_overlap_check.isChecked()
-        settings.min_distance = float(self.param_min_distance_spin.value())
-        settings.scale_min = float(self.param_scale_min_spin.value())
-        settings.scale_max = float(self.param_scale_max_spin.value())
-        settings.rotation_random_z = float(self.param_rotation_spin.value())
+        settings.mode = str(self.param_mode_combo.currentData())
         settings.seed = int(self.param_seed_spin.value())
         settings.priority = int(self.param_priority_spin.value())
+        if settings.mode == "single":
+            single_scale = float(self.param_scale_min_spin.value())
+            settings.scale_min = single_scale
+            settings.scale_max = single_scale
+            settings.rotation_random_z = float(self.param_rotation_spin.value())
+            for placement in settings.single_instances:
+                placement.scale = single_scale
+                placement.rotation_z_deg = float(self.param_rotation_spin.value())
+        else:
+            settings.density = float(self.param_density_spin.value())
+            settings.allow_overlap = self.param_allow_overlap_check.isChecked()
+            settings.min_distance = float(self.param_min_distance_spin.value())
+            settings.scale_min = float(self.param_scale_min_spin.value())
+            settings.scale_max = float(self.param_scale_max_spin.value())
+            settings.rotation_random_z = float(self.param_rotation_spin.value())
+            for placement in settings.single_instances:
+                placement.rotation_z_deg = float(self.param_rotation_spin.value())
+                placement.scale = float(self.param_scale_min_spin.value())
         settings.validate()
+        self.canvas_view.set_single_instance_defaults(
+            scale=float(self.param_scale_min_spin.value()),
+            rotation_z_deg=float(self.param_rotation_spin.value()),
+        )
+        self._refresh_parameter_form_mode(settings.mode, bool(settings.single_instances))
         self._project_state.touch()
         self._refresh_painted_layers_ui()
+
+    def _refresh_parameter_form_mode(self, mode: str, has_single_instance: bool) -> None:
+        is_single = mode == "single"
+        procedural_widgets = [
+            self.param_density_spin,
+            self.param_allow_overlap_check,
+            self.param_min_distance_spin,
+            self.param_scale_max_spin,
+            self.param_seed_spin,
+            self.param_priority_spin,
+        ]
+        for widget in procedural_widgets:
+            widget.setEnabled(not is_single and self._parameter_layer_id is not None)
+        self.param_scale_min_spin.setEnabled(self._parameter_layer_id is not None)
+        self.param_rotation_spin.setEnabled(self._parameter_layer_id is not None)
+        self.param_allow_overlap_check.setText("Allow overlap" if not is_single else "Placement on canvas")
+        if is_single:
+            self.param_allow_overlap_check.setChecked(has_single_instance)
+            self.param_allow_overlap_check.setEnabled(False)
+            self.param_scale_min_spin.setPrefix("Single scale  ")
+            self.param_rotation_spin.setPrefix("Single rot  ")
+        else:
+            self.param_scale_min_spin.setPrefix("")
+            self.param_rotation_spin.setPrefix("")
 
     def _new_project(self) -> None:
         if self._load_state.is_busy:
@@ -1120,13 +1245,20 @@ class MainWindow(QMainWindow):
         self._refresh_blender_path_label()
         self._append_log(f"Saved Blender path: {blender_path}")
 
-    def _validate_pipeline(self) -> None:
+    def _commit_design(self) -> None:
         self._refresh_painted_layers_ui()
-        self._start_pipeline_operation("validate")
+        self._start_pipeline_operation("commit")
 
     def _generate_pipeline(self) -> None:
-        self._refresh_painted_layers_ui()
-        self._start_pipeline_operation("generate")
+        commit = self._project_state.commit_state
+        if commit.stale or not commit.manifest_path:
+            self._refresh_painted_layers_ui()
+            self._start_pipeline_operation("generate")
+            return
+        if not commit.blender_validated:
+            self._start_pipeline_operation("validate_then_generate")
+            return
+        self._start_pipeline_operation("generate_only")
 
     def _final_export(self) -> None:
         latest_output = self._project_state.latest_output
@@ -1245,35 +1377,43 @@ class MainWindow(QMainWindow):
             return
 
         self._sync_project_runtime_data()
-        layer_order = [layer.layer_id for layer in self._layer_manager.all_layers()]
-        painted_ids = set(self._layer_manager.painted_layer_ids())
-        current_layers = [
-            layer_state
-            for layer_state in self._layer_manager.snapshot_layer_states()
-            if layer_state.layer_id in painted_ids
-        ]
-        current_roads = self._road_manager.snapshot_road_states()
-        if not current_layers and not current_roads:
-            QMessageBox.information(
-                self,
-                "No Content",
-                "Paint at least one layer or draw a road before validating or generating.",
-            )
-            return
-        self._project_state.layers = current_layers
-        self._project_state.roads = current_roads
-        project_snapshot = ProjectState.from_dict(self._project_state.to_dict())
-        mask_snapshots = self._layer_manager.capture_mask_snapshots([layer.layer_id for layer in current_layers])
         package_dir = self._build_pipeline_package_dir()
         backend_id = latest_output.backend_id if latest_output else self._selected_backend_id()
 
-        def mask_exporter(export_root: Path, ordered_layer_ids: list[str]) -> dict[str, str]:
-            return LayerMaskManager.export_grayscale_mask_snapshots(
-                package_dir=export_root,
-                layer_order=list(ordered_layer_ids),
-                mask_snapshots=mask_snapshots,
-                map_settings=project_snapshot.map_settings,
-            )
+        if operation in {"commit", "generate"}:
+            content_ids = set(self._layer_manager.content_layer_ids())
+            current_layers = [
+                layer_state
+                for layer_state in self._layer_manager.snapshot_layer_states()
+                if layer_state.layer_id in content_ids
+            ]
+            current_roads = self._road_manager.snapshot_road_states()
+            if not current_layers and not current_roads:
+                QMessageBox.information(
+                    self,
+                    "No Content",
+                    "Paint at least one layer or draw a road before validating or generating.",
+                )
+                return
+            self._project_state.layers = current_layers
+            self._project_state.roads = current_roads
+            project_snapshot = ProjectState.from_dict(self._project_state.to_dict())
+            mask_snapshots = self._layer_manager.capture_mask_snapshots([layer.layer_id for layer in current_layers])
+
+            def mask_exporter(export_root: Path, ordered_layer_ids: list[str]) -> dict[str, str]:
+                return LayerMaskManager.export_grayscale_mask_snapshots(
+                    package_dir=export_root,
+                    layer_order=list(ordered_layer_ids),
+                    mask_snapshots=mask_snapshots,
+                    map_settings=project_snapshot.map_settings,
+                )
+        else:
+            project_snapshot = ProjectState.from_dict(self._project_state.to_dict())
+            mask_snapshots = {}
+
+            def mask_exporter(export_root: Path, ordered_layer_ids: list[str]) -> dict[str, str]:
+                del export_root, ordered_layer_ids
+                return {}
 
         worker = PipelineWorker(
             pipeline_service=self._pipeline_service,
@@ -1282,6 +1422,8 @@ class MainWindow(QMainWindow):
             package_dir=package_dir,
             backend_id=backend_id,
             mask_exporter=mask_exporter,
+            local_validator=LocalValidationService(),
+            local_mask_snapshots=mask_snapshots,
             latest_output=latest_output,
             destination_path=destination_path,
         )
@@ -1301,7 +1443,9 @@ class MainWindow(QMainWindow):
 
         self._pipeline_thread = thread
         self._pipeline_worker = worker
-        self._set_pipeline_running(True, "exporting")
+        self._current_pipeline_operation = operation
+        initial_stage = "local_validating" if operation == "commit" else ("generating" if operation == "generate_only" else "exporting")
+        self._set_pipeline_running(True, initial_stage)
         self._append_log(f"Pipeline started ({operation}) with backend '{backend_id}'.")
         thread.start()
 
@@ -1406,10 +1550,12 @@ class MainWindow(QMainWindow):
         self._pipeline_state.current_stage = state
         self._refresh_pipeline_state_label()
         status_map = {
+            "local_validating": "Checking locally...",
             "exporting": "Exporting...",
             "validating": "Validating...",
             "generating": "Generating...",
             "finalizing": "Final export...",
+            "committed": "Design saved.",
             "validated": "Validation completed.",
             "completed": "Generation completed.",
             "failed": "Pipeline failed.",
@@ -1421,18 +1567,31 @@ class MainWindow(QMainWindow):
     @Slot(object)
     def _on_pipeline_success(self, latest_output: LatestOutputInfo) -> None:
         self._project_state.latest_output = latest_output
-        self._project_state.touch()
+        self._project_state.updated_at = utc_now_iso()
+        if self._current_pipeline_operation == "commit":
+            self._project_state.commit_state.committed_at = latest_output.completed_at or utc_now_iso()
+            self._project_state.commit_state.manifest_path = latest_output.export_manifest_path or None
+            self._project_state.commit_state.blender_validated = latest_output.status == "validated"
+            self._project_state.commit_state.stale = False
+        elif self._current_pipeline_operation in {"generate", "generate_only", "validate_then_generate"}:
+            if latest_output.export_manifest_path:
+                self._project_state.commit_state.manifest_path = latest_output.export_manifest_path
+            self._project_state.commit_state.committed_at = latest_output.completed_at or utc_now_iso()
+            self._project_state.commit_state.blender_validated = True
+            self._project_state.commit_state.stale = False
         self._refresh_latest_output_label()
         self._refresh_pipeline_actions()
         if latest_output.status == "validated":
-            self._append_log("Pipeline validated successfully.")
+            self._append_log("Design saved and validated successfully.")
+        elif latest_output.status == "committed":
+            self._append_log("Design saved successfully.")
         else:
             self._append_log("Pipeline completed successfully.")
 
     @Slot(str, object)
     def _on_pipeline_failed(self, message: str, latest_output: LatestOutputInfo) -> None:
         self._project_state.latest_output = latest_output
-        self._project_state.touch()
+        self._project_state.updated_at = utc_now_iso()
         self._refresh_latest_output_label()
         self._refresh_pipeline_actions()
         self._append_log(f"ERROR: {message}")
@@ -1442,11 +1601,14 @@ class MainWindow(QMainWindow):
         self._set_pipeline_running(False, self._pipeline_state.current_stage)
         self._pipeline_thread = None
         self._pipeline_worker = None
+        self._current_pipeline_operation = None
         if self.statusBar().currentMessage() in {
+                "Checking locally...",
                 "Exporting...",
                 "Validating...",
                 "Generating...",
                 "Final export...",
+                "Design saved.",
                 "Validation completed.",
                 "Generation completed.",
         }:
@@ -1525,8 +1687,9 @@ class MainWindow(QMainWindow):
         except GenerationPipelineError:
             supports_final_export = False
         can_start = not self._pipeline_state.is_busy and not self._load_state.is_busy
+        commit = self._project_state.commit_state
         self.action_validate_pipeline.setEnabled(can_start)
-        self.action_generate.setEnabled(can_start)
+        self.action_generate.setEnabled(can_start and (bool(commit.manifest_path) or self._has_current_design_content()))
         self.action_open_result.setEnabled(has_output)
         self.action_final_export.setEnabled(
             can_start
@@ -1534,6 +1697,11 @@ class MainWindow(QMainWindow):
             and bool(latest_output.result_path)
             and supports_final_export
         )
+        self.validate_button.setEnabled(can_start)
+        self.generate_button.setEnabled(can_start and (bool(commit.manifest_path) or self._has_current_design_content()))
+
+    def _has_current_design_content(self) -> bool:
+        return bool(self._layer_manager.content_layer_ids() or self._road_manager.has_roads() or self._project_state.terrain_settings.enabled)
 
     def _refresh_layer_tree(self) -> None:
         self._updating_layer_tree = True
@@ -1659,28 +1827,38 @@ class MainWindow(QMainWindow):
                 stack.append(current.child(idx))
 
     def _on_layer_selection_changed(self) -> None:
+        if self._updating_layer_tree:
+            return
         selected = self.layer_tree.selectedItems()
         if not selected:
             self._set_active_layer(None)
+            self._sync_paint_layer_mode_selector(None)
             return
 
         payload = selected[0].data(0, Qt.ItemDataRole.UserRole)
         if not isinstance(payload, dict):
             self._set_active_layer(None)
+            self._sync_paint_layer_mode_selector(None)
             return
         kind = payload.get("kind")
         item_id = payload.get("id")
         if kind == "layer" and isinstance(item_id, str):
-            if self._raster_mode == "erase":
+            self._sync_paint_layer_mode_selector(item_id)
+            layer_mode = self._layer_manager.layer_mode(item_id)
+            if layer_mode == "single":
+                self._set_brush_mode("single")
+            elif self._raster_mode == "erase":
                 self._set_brush_mode("erase")
             else:
                 self._set_brush_mode("paint")
             self._set_active_layer(item_id)
             return
         if kind in {"road_tool", "road"}:
+            self._sync_paint_layer_mode_selector(None)
             self._set_brush_mode("road")
             self._set_active_layer(None)
             return
+        self._sync_paint_layer_mode_selector(None)
         self._set_active_layer(None)
 
     def _set_active_layer(self, layer_id: str | None) -> None:
@@ -1739,6 +1917,14 @@ class MainWindow(QMainWindow):
             self.road_group.setVisible(True)
             return
 
+        if mode == "single":
+            self._editing_target = "single"
+            self.paint_mode_button.setChecked(False)
+            self.erase_mode_button.setChecked(False)
+            self.canvas_view.set_edit_mode("single")
+            self.road_group.setVisible(False)
+            return
+
         self._editing_target = "layer"
         self._raster_mode = "erase"
         self.paint_mode_button.setChecked(False)
@@ -1786,12 +1972,55 @@ class MainWindow(QMainWindow):
         if self.workflow_stack.currentIndex() == 2:
             self._refresh_painted_layers_ui()
 
+    def _on_single_instance_modified(self) -> None:
+        self._project_state.touch()
+        if self._active_layer_id is not None:
+            self._sync_paint_layer_mode_selector(self._active_layer_id)
+            if self._layer_manager.layer_mode(self._active_layer_id) == "single":
+                self._set_brush_mode("single")
+        if self.workflow_stack.currentIndex() == 2:
+            self._refresh_painted_layers_ui()
+
+    def _sync_paint_layer_mode_selector(self, layer_id: str | None) -> None:
+        self.paint_layer_mode_combo.blockSignals(True)
+        if layer_id is None:
+            self.paint_layer_mode_combo.setEnabled(False)
+            self.paint_layer_mode_label.setEnabled(False)
+            self.paint_layer_mode_combo.setCurrentIndex(0)
+        else:
+            self.paint_layer_mode_combo.setEnabled(True)
+            self.paint_layer_mode_label.setEnabled(True)
+            mode = self._layer_manager.layer_mode(layer_id)
+            index = self.paint_layer_mode_combo.findData(mode)
+            self.paint_layer_mode_combo.setCurrentIndex(index if index >= 0 else 0)
+        self.paint_layer_mode_combo.blockSignals(False)
+
+    def _on_paint_layer_mode_changed(self, _index: int) -> None:
+        if self._active_layer_id is None:
+            return
+        layer = self._layer_manager.get_layer(self._active_layer_id)
+        if layer is None:
+            return
+        mode = self.paint_layer_mode_combo.currentData()
+        if not isinstance(mode, str):
+            return
+        layer.generation_settings.mode = mode
+        if mode == "single":
+            self._set_brush_mode("single")
+        elif self._raster_mode == "erase":
+            self._set_brush_mode("erase")
+        else:
+            self._set_brush_mode("paint")
+        self._project_state.touch()
+        self._refresh_layer_tree()
+        self._refresh_painted_layers_ui()
+
     def _sync_project_runtime_data(self) -> None:
         self._project_state.source_blend = str(self._current_blend) if self._current_blend else ""
         self._project_state.blender_executable = self._settings.get_blender_executable() or ""
         self._project_state.output_blend = self.output_path_edit.text().strip()
         if self._terrain_available:
-            self._terrain_tab.save_heightfield()
+            self._terrain_tab.save_heightfield(emit_signal=False)
             self._project_state.terrain_settings = self._terrain_tab.terrain_service.settings
         self._project_state.roads = self._road_manager.snapshot_road_states()
         if self._project_file_path and not self._project_state.project_name.strip():
@@ -1951,20 +2180,24 @@ class MainWindow(QMainWindow):
         )
         labels = {
             "idle": "Idle",
+            "local_validating": "Checking",
             "exporting": "Exporting",
             "validating": "Validating",
             "generating": "Generating",
             "finalizing": "Finalizing",
+            "committed": "Committed",
             "validated": "Validated",
             "completed": "Success",
             "failed": "Failed",
         }
         pill_styles = {
             "idle": "background:#374151; color:#9ca3af; border-radius:10px; padding:2px 8px;",
+            "local_validating": "background:#1d4ed8; color:#bfdbfe; border-radius:10px; padding:2px 8px;",
             "exporting": "background:#1d4ed8; color:#bfdbfe; border-radius:10px; padding:2px 8px;",
             "validating": "background:#1d4ed8; color:#bfdbfe; border-radius:10px; padding:2px 8px;",
             "generating": "background:#1d4ed8; color:#bfdbfe; border-radius:10px; padding:2px 8px;",
             "finalizing": "background:#1d4ed8; color:#bfdbfe; border-radius:10px; padding:2px 8px;",
+            "committed": "background:#14532d; color:#86efac; border-radius:10px; padding:2px 8px;",
             "validated": "background:#14532d; color:#86efac; border-radius:10px; padding:2px 8px;",
             "completed": "background:#14532d; color:#86efac; border-radius:10px; padding:2px 8px;",
             "failed": "background:#7f1d1d; color:#fca5a5; border-radius:10px; padding:2px 8px;",

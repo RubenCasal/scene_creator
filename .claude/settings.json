@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p /home/ruben/Desktop/scene_generator/plan_markdown)"
+    ],
+    "additionalDirectories": [
+      "/home/ruben/Desktop/scene_generator"
+    ]
+  }
+}

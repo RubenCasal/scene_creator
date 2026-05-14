@@ -15,6 +15,7 @@ from proc_map_designer.services.export_package_service import ExportPackageServi
 from proc_map_designer.services.final_export_service import FinalExportResult
 from proc_map_designer.services.generation_pipeline_service import GenerationPipelineService
 from proc_map_designer.services.generation_service import GenerationResult, GenerationService, GenerationServiceError
+from proc_map_designer.services.local_validation_service import LocalValidationService
 from proc_map_designer.services.validation_service import ValidationReport
 
 
@@ -77,16 +78,21 @@ class GenerationPipelineServiceTests(unittest.TestCase):
 
     def test_validate_and_generate_with_python_batch_backend(self) -> None:
         service = self._build_service()
-        project = ProjectState.create_new(
-            project_name="PipelineTest",
-            source_blend="/tmp/source.blend",
-            blender_executable="/usr/bin/blender",
-            output_blend="/tmp/result.blend",
-        )
-        project.map_settings.base_plane_object = "BasePlane"
-        project.layers = [LayerState(layer_id="vegetation/pino", name="Pino")]
-
         with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            source_blend = temp_root / "source.blend"
+            source_blend.write_bytes(b"blend")
+            blender_exe = temp_root / "blender"
+            blender_exe.write_text("#!/bin/sh\n", encoding="utf-8")
+            output_blend = temp_root / "result.blend"
+            project = ProjectState.create_new(
+                project_name="PipelineTest",
+                source_blend=str(source_blend),
+                blender_executable=str(blender_exe),
+                output_blend=str(output_blend),
+            )
+            project.map_settings.base_plane_object = "BasePlane"
+            project.layers = [LayerState(layer_id="vegetation/pino", name="Pino")]
             package_dir = Path(temp_dir) / "pkg"
 
             def exporter(export_root: Path, layer_ids: list[str]) -> dict[str, str]:
@@ -106,18 +112,39 @@ class GenerationPipelineServiceTests(unittest.TestCase):
                 backend_id="python_batch",
             )
             self.assertEqual(validate_result.status, "validated")
-            self.assertEqual(validate_result.validation_warnings, ["warn-a"])
+            self.assertEqual(
+                validate_result.validation_warnings,
+                ["Layer 'Pino' has no painted mask snapshot.", "warn-a"],
+            )
             self.assertTrue(Path(validate_result.export_manifest_path).exists())
+
+            commit_result = service.commit_design(
+                project,
+                package_dir,
+                exporter,
+                LocalValidationService(),
+                backend_id="python_batch",
+                deep_validate=False,
+            )
+            self.assertEqual(commit_result.status, "committed")
 
             generate_result = service.generate_project(
                 project,
                 package_dir,
                 exporter,
                 backend_id="python_batch",
+                skip_validation=True,
             )
             self.assertEqual(generate_result.status, "completed")
-            self.assertEqual(generate_result.result_path, "/tmp/result.blend")
+            self.assertEqual(generate_result.result_path, str(output_blend))
             self.assertEqual(generate_result.used_layer_ids, ["vegetation/pino"])
+
+            generate_only = service.generate_only(
+                manifest_path=Path(commit_result.export_manifest_path),
+                backend_id="python_batch",
+                project=project,
+            )
+            self.assertEqual(generate_only.status, "completed")
 
     def test_final_export_preserves_existing_result_metadata(self) -> None:
         service = self._build_service()

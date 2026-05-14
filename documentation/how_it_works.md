@@ -19,7 +19,10 @@ Both backends read the same export package (`project.json` + mask PNGs) and run 
 
 ## Stage 1 — Mask-Driven Candidate Sampling
 
-Every layer has a greyscale PNG mask painted in the app's 2D canvas. The mask encodes **placement probability**: white pixels (value 1.0) allow maximum density, black pixels (value 0.0) forbid placement, and grey values scale density proportionally.
+Every layer can work in one of two modes:
+
+- **Procedural** — a greyscale PNG mask encodes placement probability: white pixels (value 1.0) allow maximum density, black pixels (value 0.0) forbid placement, and grey values scale density proportionally.
+- **Single Instance** — the app stores one or more explicit square placements in project state. Each square becomes exactly one generated object.
 
 ```
 Canvas mask (greyscale PNG)
@@ -49,6 +52,12 @@ The placement planner filters and finalises candidate positions using a spatial 
 
 ```
 For each layer (processed in descending priority order):
+
+  If mode == single:
+    - read all explicit square placements
+    - emit one Placement per square
+    - sample terrain height / normal if terrain is enabled
+    - skip mask sampling entirely
 
   1. Sample candidate positions from the mask
   2. Shuffle candidates using a per-layer seed
@@ -234,7 +243,7 @@ User waypoints (2D canvas clicks)
 
 ## Terrain
 
-If a heightfield PNG is saved (from the terrain sculpting tab), the generation backends create a subdivided plane in Blender and apply a **Displace modifier** using the heightfield as the texture. The `max_height` parameter controls the vertical scale of the displacement.
+If a heightfield PNG is saved (from the terrain sculpting tab), the generation backends create a subdivided plane in Blender and displace it from the saved heightfield. The `max_height` parameter controls the vertical scale of the displacement.
 
 ```
 Heightfield PNG (greyscale, 0=low, 1=high)
@@ -259,14 +268,15 @@ All backends consume the same export package, making it easy to switch backends 
 ```
 <export_dir>/
 ├── project.json          ← all settings, layer definitions, road paths, terrain config
-└── masks/
+├── masks/
+└── terrain/
     ├── 000_vegetation_pine_tree.png
     ├── 001_vegetation_almond_tree.png
     ├── 002_buildings_hangar.png
     └── ...
 ```
 
-The `project.json` schema (version 3) is the single source of truth for generation. It contains every parameter needed to reproduce the output exactly — map dimensions, mask resolution, per-layer settings, road waypoints, terrain settings, Blender executable path, and output path.
+The `project.json` schema is the single source of truth for generation. It contains every parameter needed to reproduce the output exactly — map dimensions, mask resolution, per-layer settings, explicit single-instance placements, road waypoints, terrain settings, Blender executable path, and output path.
 
 ---
 

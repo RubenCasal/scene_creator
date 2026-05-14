@@ -11,6 +11,7 @@ if str(SRC_PATH) not in sys.path:
 
 from proc_map_designer.domain.models import CollectionNode
 from proc_map_designer.domain.project_state import (
+    CommitState,
     LayerGenerationSettings,
     LayerState,
     LatestOutputInfo,
@@ -20,6 +21,7 @@ from proc_map_designer.domain.project_state import (
     RoadPoint,
     RoadState,
     RoadStyleSettings,
+    SingleInstancePlacement,
 )
 
 
@@ -47,7 +49,7 @@ class ProjectStateTests(unittest.TestCase):
         payload = state.to_dict()
         loaded = ProjectState.from_dict(payload)
 
-        self.assertEqual(loaded.schema_version, 3)
+        self.assertEqual(loaded.schema_version, 6)
         self.assertEqual(loaded.project_name, "MapaTest")
         self.assertEqual(loaded.source_blend, "/tmp/example.blend")
         self.assertEqual(loaded.output_blend, "/tmp/output.blend")
@@ -57,6 +59,7 @@ class ProjectStateTests(unittest.TestCase):
         self.assertEqual(loaded.map_settings.base_plane_object, "BasePlane")
         self.assertEqual(loaded.map_settings.terrain_material_id, "terrain_dirt")
         self.assertFalse(loaded.terrain_settings.enabled)
+        self.assertTrue(loaded.commit_state.stale)
 
     def test_invalid_schema_version_fails(self) -> None:
         payload = ProjectState.create_new().to_dict()
@@ -207,6 +210,28 @@ class ProjectStateTests(unittest.TestCase):
         self.assertEqual(settings.max_count, 150)
         self.assertTrue(settings.align_to_surface_normal)
 
+    def test_single_instance_generation_settings_round_trip(self) -> None:
+        state = ProjectState.create_new(project_name="SingleLayer")
+        state.layers = [
+            LayerState(
+                layer_id="building/tower",
+                name="building/tower",
+                generation_settings=LayerGenerationSettings(
+                    mode="single",
+                    single_instances=[
+                        SingleInstancePlacement(x=12.5, y=-6.0, rotation_z_deg=35.0, scale=1.3),
+                        SingleInstancePlacement(x=4.0, y=7.0, rotation_z_deg=5.0, scale=0.9),
+                    ],
+                ),
+            )
+        ]
+        loaded = ProjectState.from_dict(state.to_dict())
+        settings = loaded.layers[0].generation_settings
+        self.assertEqual(settings.mode, "single")
+        self.assertEqual(len(settings.single_instances), 2)
+        self.assertEqual(settings.single_instances[0].x, 12.5)
+        self.assertEqual(settings.single_instances[0].rotation_z_deg, 35.0)
+
     def test_layer_generation_settings_validation(self) -> None:
         with self.assertRaises(ValueError):
             LayerGenerationSettings(scale_min=2.0, scale_max=1.0)
@@ -239,6 +264,19 @@ class ProjectStateTests(unittest.TestCase):
         self.assertEqual(loaded.latest_output.result_path, "/tmp/output.blend")
         self.assertEqual(loaded.latest_output.used_layer_ids, ["vegetation/pino"])
         self.assertEqual(loaded.latest_output.validation_warnings, ["mask dimensions ok"])
+
+    def test_commit_state_round_trip(self) -> None:
+        state = ProjectState.create_new(project_name="Commit")
+        state.commit_state = CommitState(
+            committed_at="2026-06-01T10:00:00+00:00",
+            manifest_path="/tmp/pkg/project.json",
+            blender_validated=True,
+            stale=False,
+        )
+        loaded = ProjectState.from_dict(state.to_dict())
+        self.assertEqual(loaded.commit_state.manifest_path, "/tmp/pkg/project.json")
+        self.assertTrue(loaded.commit_state.blender_validated)
+        self.assertFalse(loaded.commit_state.stale)
 
 
 if __name__ == "__main__":

@@ -16,7 +16,7 @@ from proc_map_designer.domain.validators import (
     require_string,
 )
 
-PROJECT_SCHEMA_VERSION = 3
+PROJECT_SCHEMA_VERSION = 6
 
 
 def utc_now_iso() -> str:
@@ -107,6 +107,7 @@ class MapSettings:
 @dataclass(slots=True)
 class LayerGenerationSettings:
     enabled: bool = True
+    mode: str = "procedural"
     density: float = 1.0
     seed: int | None = None
     allow_overlap: bool = True
@@ -119,9 +120,13 @@ class LayerGenerationSettings:
     slope_limit_deg: float | None = None
     max_count: int | None = None
     align_to_surface_normal: bool | None = None
+    single_instances: list["SingleInstancePlacement"] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.enabled = require_bool(self.enabled, "layers[].generation_settings.enabled")
+        self.mode = require_string(self.mode, "layers[].generation_settings.mode")
+        if self.mode not in {"procedural", "single"}:
+            raise ValueError("'layers[].generation_settings.mode' debe ser 'procedural' o 'single'.")
         self.density = require_float(
             self.density,
             "layers[].generation_settings.density",
@@ -188,6 +193,24 @@ class LayerGenerationSettings:
             )
         self.align_to_surface_normal = align_to_surface_normal
 
+        if isinstance(self.single_instances, list):
+            single_instances = [
+                item if isinstance(item, SingleInstancePlacement) else SingleInstancePlacement.from_dict(
+                    require_mapping(item, "layers[].generation_settings.single_instances[]")
+                )
+                for item in self.single_instances
+            ]
+        elif self.single_instances is None:
+            single_instances = []
+        else:
+            single_instances = [
+                self.single_instances if isinstance(self.single_instances, SingleInstancePlacement) else SingleInstancePlacement.from_dict(
+                    require_mapping(self.single_instances, "layers[].generation_settings.single_instances")
+                )
+            ]
+        self.single_instances = single_instances
+
+
     def validate(self) -> None:
         self.__post_init__()
 
@@ -196,6 +219,7 @@ class LayerGenerationSettings:
         mapping = require_mapping(data, "layers[].generation_settings")
         return cls(
             enabled=mapping.get("enabled", True),
+            mode=mapping.get("mode", "procedural"),
             density=mapping.get("density", 1.0),
             seed=mapping.get("seed"),
             allow_overlap=mapping.get("allow_overlap", True),
@@ -208,11 +232,17 @@ class LayerGenerationSettings:
             slope_limit_deg=mapping.get("slope_limit_deg"),
             max_count=mapping.get("max_count"),
             align_to_surface_normal=mapping.get("align_to_surface_normal"),
+            single_instances=(
+                mapping.get("single_instances")
+                if "single_instances" in mapping
+                else ([mapping["single_instance"]] if mapping.get("single_instance") is not None else [])
+            ),
         )
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "enabled": self.enabled,
+            "mode": self.mode,
             "density": self.density,
             "seed": self.seed,
             "allow_overlap": self.allow_overlap,
@@ -225,6 +255,46 @@ class LayerGenerationSettings:
             "slope_limit_deg": self.slope_limit_deg,
             "max_count": self.max_count,
             "align_to_surface_normal": self.align_to_surface_normal,
+            "single_instances": [placement.to_dict() for placement in self.single_instances],
+        }
+
+
+@dataclass(slots=True)
+class SingleInstancePlacement:
+    x: float
+    y: float
+    rotation_z_deg: float = 0.0
+    scale: float = 1.0
+
+    def __post_init__(self) -> None:
+        self.x = require_float(self.x, "layers[].generation_settings.single_instance.x")
+        self.y = require_float(self.y, "layers[].generation_settings.single_instance.y")
+        self.rotation_z_deg = require_float(
+            self.rotation_z_deg,
+            "layers[].generation_settings.single_instance.rotation_z_deg",
+        )
+        self.scale = require_float(
+            self.scale,
+            "layers[].generation_settings.single_instance.scale",
+            min_value=0.0,
+        )
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "SingleInstancePlacement":
+        mapping = require_mapping(data, "layers[].generation_settings.single_instance")
+        return cls(
+            x=mapping.get("x", 0.0),
+            y=mapping.get("y", 0.0),
+            rotation_z_deg=mapping.get("rotation_z_deg", 0.0),
+            scale=mapping.get("scale", 1.0),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "x": self.x,
+            "y": self.y,
+            "rotation_z_deg": self.rotation_z_deg,
+            "scale": self.scale,
         }
 
 
@@ -538,6 +608,43 @@ class LatestOutputInfo:
 
 
 @dataclass(slots=True)
+class CommitState:
+    committed_at: str | None = None
+    manifest_path: str | None = None
+    blender_validated: bool = False
+    stale: bool = True
+
+    def __post_init__(self) -> None:
+        if self.committed_at:
+            self.committed_at = _validate_iso_timestamp(self.committed_at, "commit_state.committed_at")
+        self.manifest_path = require_string(
+            self.manifest_path or "",
+            "commit_state.manifest_path",
+            allow_empty=True,
+        ) or None
+        self.blender_validated = require_bool(self.blender_validated, "commit_state.blender_validated")
+        self.stale = require_bool(self.stale, "commit_state.stale")
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "CommitState":
+        mapping = require_mapping(data, "commit_state")
+        return cls(
+            committed_at=mapping.get("committed_at"),
+            manifest_path=mapping.get("manifest_path"),
+            blender_validated=mapping.get("blender_validated", False),
+            stale=mapping.get("stale", True),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "committed_at": self.committed_at,
+            "manifest_path": self.manifest_path,
+            "blender_validated": self.blender_validated,
+            "stale": self.stale,
+        }
+
+
+@dataclass(slots=True)
 class ProjectState:
     schema_version: int
     project_id: str
@@ -553,6 +660,7 @@ class ProjectState:
     layers: list[LayerState] = field(default_factory=list)
     roads: list[RoadState] = field(default_factory=list)
     generation_settings: GenerationSettings = field(default_factory=GenerationSettings)
+    commit_state: CommitState = field(default_factory=CommitState)
     latest_output: LatestOutputInfo | None = None
 
     @classmethod
@@ -579,6 +687,7 @@ class ProjectState:
             layers=[],
             roads=[],
             generation_settings=GenerationSettings(),
+            commit_state=CommitState(),
             latest_output=None,
         )
 
@@ -587,7 +696,7 @@ class ProjectState:
         mapping = require_mapping(data, "project_state")
 
         schema_version = require_int(mapping.get("schema_version"), "schema_version", min_value=1)
-        if schema_version not in {1, 2, PROJECT_SCHEMA_VERSION}:
+        if schema_version not in {1, 2, 3, 4, 5, PROJECT_SCHEMA_VERSION}:
             raise ValueError(
                 f"schema_version={schema_version} no soportada. Esperada: {PROJECT_SCHEMA_VERSION}."
             )
@@ -614,6 +723,9 @@ class ProjectState:
             require_mapping(raw_generation_settings, "generation_settings")
         )
 
+        raw_commit_state = mapping.get("commit_state", {})
+        commit_state = CommitState.from_dict(require_mapping(raw_commit_state, "commit_state"))
+
         raw_latest_output = mapping.get("latest_output")
         if raw_latest_output is None:
             latest_output = None
@@ -633,7 +745,7 @@ class ProjectState:
         updated_at = _validate_iso_timestamp(mapping.get("updated_at"), "updated_at")
 
         return cls(
-            schema_version=schema_version,
+            schema_version=PROJECT_SCHEMA_VERSION,
             project_id=project_id,
             project_name=project_name,
             source_blend=source_blend,
@@ -647,11 +759,13 @@ class ProjectState:
             layers=layers,
             roads=roads,
             generation_settings=generation_settings,
+            commit_state=commit_state,
             latest_output=latest_output,
         )
 
     def touch(self) -> None:
         self.updated_at = utc_now_iso()
+        self.commit_state.stale = True
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -669,5 +783,6 @@ class ProjectState:
             "layers": [layer.to_dict() for layer in self.layers],
             "roads": [road.to_dict() for road in self.roads],
             "generation_settings": self.generation_settings.to_dict(),
+            "commit_state": self.commit_state.to_dict(),
             "latest_output": self.latest_output.to_dict() if self.latest_output else None,
         }

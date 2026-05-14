@@ -83,7 +83,8 @@ def validate_package(package_path: Path) -> dict[str, Any]:
         layer_info: dict[str, Any] = {
             "layer_id": layer.layer_id,
             "category": layer.category,
-            "mask_path": str(layer.mask_path),
+            "generation_mode": layer.generation_mode,
+            "mask_path": str(layer.mask_path) if layer.mask_path is not None else None,
             "mask_exists": layer.mask_exists,
             "enabled": layer.enabled,
         }
@@ -91,10 +92,14 @@ def validate_package(package_path: Path) -> dict[str, Any]:
         if not layer.enabled:
             warnings.append(f"La capa '{layer.layer_id}' está deshabilitada y se omitirá en la generación.")
 
-        if not layer.mask_exists:
+        if layer.generation_mode == "single":
+            if not layer.single_instances:
+                errors.append(f"La capa '{layer.layer_id}' está en modo single pero no tiene placements definidos.")
+        elif not layer.mask_exists:
             errors.append(f"No se encontró la máscara para '{layer.layer_id}': {layer.mask_path}")
         else:
             try:
+                assert layer.mask_path is not None
                 mask_width, mask_height = read_mask_resolution(layer.mask_path)
             except ValueError as exc:
                 errors.append(str(exc))

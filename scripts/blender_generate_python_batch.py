@@ -87,15 +87,18 @@ def cleanup_object(name: str) -> None:
 
 def cleanup_generated_state(root_name: str) -> None:
     cleanup_collection(FINAL_ROOT_NAME)
-    cleanup_collection(root_name)
     cleanup_object(RUNTIME_PLANE_NAME)
     for obj in list(bpy.data.objects):
         if obj.get("pm_backend") or obj.get("pm_runtime_plane"):
             bpy.data.objects.remove(obj, do_unlink=True)
+    for collection in list(bpy.data.collections):
+        if collection.get("pm_generated_category"):
+            bpy.data.collections.remove(collection)
 
 
 def create_child_collection(parent: bpy.types.Collection, name: str) -> bpy.types.Collection:
     collection = bpy.data.collections.new(name)
+    collection["pm_generated_category"] = True
     parent.children.link(collection)
     return collection
 
@@ -131,18 +134,39 @@ def create_runtime_plane(width: float, height: float) -> bpy.types.Object:
     return obj
 
 
-def hide_original_scene_content(visible_root_names: set[str]) -> None:
+def detach_original_scene_content(visible_root_names: set[str]) -> None:
     scene_root = bpy.context.scene.collection
     for child in list(scene_root.children):
         if child.name in visible_root_names:
             continue
-        child.hide_viewport = True
-        child.hide_render = True
+        scene_root.children.unlink(child)
     for obj in list(scene_root.objects):
         if obj.name in visible_root_names:
             continue
-        obj.hide_viewport = True
-        obj.hide_render = True
+        scene_root.objects.unlink(obj)
+
+
+def rename_original_scene_content(prefix: str = "__SRC__") -> None:
+    scene_root = bpy.context.scene.collection
+    for child in list(scene_root.children):
+        _rename_collection_recursive(child, prefix)
+    for obj in list(scene_root.objects):
+        if obj.get("pm_backend") or obj.get("pm_runtime_plane"):
+            continue
+        if not obj.name.startswith(prefix):
+            obj.name = f"{prefix}{obj.name}"
+
+
+def _rename_collection_recursive(collection: bpy.types.Collection, prefix: str) -> None:
+    if not collection.name.startswith(prefix):
+        collection.name = f"{prefix}{collection.name}"
+    for obj in collection.objects:
+        if obj.get("pm_backend") or obj.get("pm_runtime_plane"):
+            continue
+        if not obj.name.startswith(prefix):
+            obj.name = f"{prefix}{obj.name}"
+    for child in collection.children:
+        _rename_collection_recursive(child, prefix)
 
 
 def configure_material_viewport() -> None:
@@ -179,6 +203,21 @@ def collection_ground_offset(collection: bpy.types.Collection) -> float:
     return -min_z
 
 
+def collection_horizontal_radius(collection: bpy.types.Collection) -> float:
+    max_radius = 0.0
+    for obj in collection.all_objects:
+        if obj.type not in {"MESH", "CURVE", "SURFACE", "FONT", "META", "VOLUME", "POINTCLOUD"}:
+            continue
+        if not obj.bound_box:
+            continue
+        for corner in obj.bound_box:
+            world_corner = obj.matrix_world @ Vector(corner)
+            radius = math.hypot(world_corner.x, world_corner.y)
+            if radius > max_radius:
+                max_radius = radius
+    return max_radius
+
+
 def plan_layer_inputs(
     package_layers: list[ExportLayerDefinition],
 ) -> tuple[list[LayerPlanInput], dict[str, ExportLayerDefinition]]:
@@ -188,9 +227,9 @@ def plan_layer_inputs(
         layer_lookup[layer.layer_id] = layer
         if not layer.enabled:
             continue
-        if not layer.mask_exists:
+        if layer.generation_mode != "single" and not layer.mask_exists:
             raise ValueError(f"No existe la máscara necesaria para '{layer.layer_id}'.")
-        mask_field = load_mask_field(layer.mask_path)
+        mask_field = load_mask_field(layer.mask_path) if layer.mask_path is not None else None
         layer_inputs.append(
             LayerPlanInput(
                 layer_id=layer.layer_id,
@@ -198,6 +237,7 @@ def plan_layer_inputs(
                 enabled=True,
                 settings=layer.settings,
                 mask=mask_field,
+                single_instances=layer.single_instances,
             )
         )
     return layer_inputs, layer_lookup
@@ -219,6 +259,20 @@ def resolve_asset_collections(layers: list[ExportLayerDefinition]) -> dict[str, 
     return assets
 
 
+def apply_default_bounding_radii(
+    layer_inputs: list[LayerPlanInput],
+    asset_collections: dict[str, bpy.types.Collection],
+) -> None:
+    for layer_input in layer_inputs:
+        settings = layer_input.settings
+        if getattr(settings, "bounding_radius", None) not in (None, 0.0):
+            continue
+        collection = asset_collections.get(layer_input.layer_id)
+        if collection is None:
+            continue
+        settings.bounding_radius = collection_horizontal_radius(collection)
+
+
 def generate_instances(
     plans: list[LayerPlacementPlan],
     layer_lookup: dict[str, ExportLayerDefinition],
@@ -230,7 +284,6 @@ def generate_instances(
     ground_offsets = {layer_id: collection_ground_offset(collection) for layer_id, collection in asset_collections.items()}
 
     category_cache: dict[str, bpy.types.Collection] = {}
-    layer_cache: dict[str, bpy.types.Collection] = {}
 
     for plan in plans:
         layer_id = plan.layer_id
@@ -243,14 +296,10 @@ def generate_instances(
             category_collection = create_child_collection(root_collection, definition.category)
             category_cache[definition.category] = category_collection
 
-        layer_collection = layer_cache.get(layer_id)
-        if layer_collection is None:
-            layer_collection = create_child_collection(category_collection, definition.name)
-            layer_cache[layer_id] = layer_collection
-
         placed = 0
         for index, placement in enumerate(placements):
-            obj_name = f"PM_{definition.category}_{definition.name}_{index:05d}"
+            base_name = definition.name or layer_id.split("/")[-1]
+            obj_name = base_name if index == 0 else f"{base_name}_{index:05d}"
             obj = bpy.data.objects.new(obj_name, None)
             obj.empty_display_type = 'PLAIN_AXES'
             obj.instance_type = 'COLLECTION'
@@ -267,7 +316,7 @@ def generate_instances(
             obj["pm_category"] = definition.category
             obj["pm_backend"] = BACKEND_NAME
 
-            layer_collection.objects.link(obj)
+            category_collection.objects.link(obj)
             placed += 1
 
         summary.append({"layer_id": layer_id, "count": placed})
@@ -290,6 +339,7 @@ def main(argv: list[str]) -> None:
 
     layer_inputs, layer_lookup = plan_layer_inputs(package.layers)
     asset_collections = resolve_asset_collections([layer for layer in package.layers if layer.enabled])
+    apply_default_bounding_radii(layer_inputs, asset_collections)
     print(f"[python_batch] Capas habilitadas: {len(layer_inputs)}")
 
     map_dims = MapDimensions(
@@ -309,8 +359,8 @@ def main(argv: list[str]) -> None:
     plans = plan_generation(package.project_id, map_dims, layer_inputs, terrain_sampler=terrain_sampler)
 
     cleanup_generated_state(args.root_name)
-    root_collection = bpy.data.collections.new(args.root_name)
-    ensure_collection_linked_to_scene(root_collection)
+    rename_original_scene_content()
+    root_collection = bpy.context.scene.collection
     if package.map.terrain.enabled and package.map.terrain.heightfield_exists:
         runtime_plane = create_terrain_plane(
             package.map.width,
@@ -327,15 +377,14 @@ def main(argv: list[str]) -> None:
         )
     else:
         runtime_plane = create_runtime_plane(package.map.width, package.map.height)
-    root_collection.objects.link(runtime_plane)
-    if bpy.context.scene.collection.objects.get(runtime_plane.name) is not None:
-        bpy.context.scene.collection.objects.unlink(runtime_plane)
+    if runtime_plane.name not in root_collection.objects:
+        root_collection.objects.link(runtime_plane)
     prepare_runtime_plane_as_terrain(
         terrain_material_id=package.map.terrain_material_id,
         runtime_plane=runtime_plane,
     )
     print(f"[python_batch] Plano runtime creado: {runtime_plane.name} ({package.map.width} x {package.map.height})")
-    hide_original_scene_content({root_collection.name})
+    detach_original_scene_content({runtime_plane.name})
     configure_material_viewport()
 
     summary = generate_instances(plans, layer_lookup, asset_collections, runtime_plane, root_collection)

@@ -51,7 +51,8 @@ class LayerPlanInput:
     category: str
     enabled: bool
     settings: Any
-    mask: MaskField
+    mask: MaskField | None
+    single_instances: list[Any] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -125,7 +126,9 @@ def plan_generation(
         plans.append(plan)
         if not layer.enabled:
             continue
-        if layer.mask.width != map_dims.mask_width or layer.mask.height != map_dims.mask_height:
+        if layer.settings.mode != "single" and layer.mask is not None and (
+            layer.mask.width != map_dims.mask_width or layer.mask.height != map_dims.mask_height
+        ):
             raise ValueError(
                 f"La máscara de '{layer.layer_id}' no coincide con la resolución del mapa."
             )
@@ -146,6 +149,37 @@ def _plan_single_layer(
     global_points: list[tuple[float, float]],
     terrain_sampler: TerrainSampler | None,
 ) -> list[Placement]:
+    if getattr(layer.settings, "mode", "procedural") == "single":
+        if not layer.single_instances:
+            return []
+        placements: list[Placement] = []
+        for placement in layer.single_instances:
+            scene_x = float(placement.x)
+            scene_y = float(placement.y)
+            scale_value = max(0.0, float(placement.scale))
+            if not _placement_within_bounds(scene_x, scene_y, map_dims, getattr(layer.settings, "bounding_radius", None), scale_value):
+                continue
+            terrain_z = 0.0
+            surface_normal = (0.0, 1.0, 0.0)
+            if terrain_sampler is not None:
+                terrain_z = terrain_sampler.sample_at(scene_x, scene_y)
+                if bool(getattr(layer.settings, "align_to_surface_normal", False)):
+                    surface_normal = terrain_sampler.sample_normal_at(scene_x, scene_y)
+            placements.append(
+                Placement(
+                    x=scene_x,
+                    y=scene_y,
+                    z=terrain_z,
+                    rotation_z_deg=float(placement.rotation_z_deg),
+                    scale=scale_value,
+                    weight=1.0,
+                    normal=surface_normal,
+                )
+            )
+        return placements
+
+    if layer.mask is None:
+        return []
     mask = layer.mask
     density = max(0.0, float(layer.settings.density))
     if density <= 0.0:
@@ -203,6 +237,9 @@ def _plan_single_layer(
             scale_value = scale_min
         else:
             scale_value = rng.uniform(scale_min, scale_max)
+
+        if not _placement_within_bounds(scene_x, scene_y, map_dims, getattr(layer.settings, "bounding_radius", None), scale_value):
+            continue
 
         placements.append(
             Placement(
@@ -271,3 +308,16 @@ def _has_conflict(
         if dx * dx + dy * dy < min_distance_sq:
             return True
     return False
+
+
+def _placement_within_bounds(
+    x: float,
+    y: float,
+    dims: MapDimensions,
+    bounding_radius: float | None,
+    scale: float,
+) -> bool:
+    half_width = dims.width / 2.0
+    half_height = dims.height / 2.0
+    radius = 0.0 if bounding_radius is None else max(0.0, float(bounding_radius)) * max(0.0, float(scale))
+    return (-half_width + radius) <= x <= (half_width - radius) and (-half_height + radius) <= y <= (half_height - radius)

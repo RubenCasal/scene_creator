@@ -27,11 +27,13 @@ from proc_map_designer.blender_bridge import LayerPlanInput, MapDimensions, plan
 from proc_map_designer.blender_bridge.terrain_sampler import TerrainSampler
 from proc_map_designer.blender_bridge.package_loader import ExportLayerDefinition, load_export_package
 from blender_generate_python_batch import (
+    apply_default_bounding_radii,
     configure_material_viewport,
     create_runtime_plane,
     cleanup_generated_state,
-    hide_original_scene_content,
+    detach_original_scene_content,
     load_mask_field,
+    rename_original_scene_content,
 )
 
 BACKEND_NAME = "geometry_nodes_v2"
@@ -89,7 +91,7 @@ def build_layer_inputs(package_layers: list[ExportLayerDefinition]) -> tuple[lis
         layer_lookup[layer.layer_id] = layer
         if not layer.enabled:
             continue
-        if not layer.mask_exists:
+        if layer.generation_mode != "single" and not layer.mask_exists:
             raise ValueError(f"No existe la máscara necesaria para '{layer.layer_id}'.")
         layer_inputs.append(
             LayerPlanInput(
@@ -97,7 +99,8 @@ def build_layer_inputs(package_layers: list[ExportLayerDefinition]) -> tuple[lis
                 category=layer.category,
                 enabled=True,
                 settings=layer.settings,
-                mask=load_mask_field(layer.mask_path),
+                mask=load_mask_field(layer.mask_path) if layer.mask_path is not None else None,
+                single_instances=layer.single_instances,
             )
         )
     return layer_inputs, layer_lookup
@@ -115,6 +118,9 @@ def build_instance_node_group(
     name: str,
     asset_collection: bpy.types.Collection,
     settings: Any,
+    *,
+    fixed_scale: float | None = None,
+    fixed_rotation_z_deg: float | None = None,
 ) -> bpy.types.NodeTree:
     group = bpy.data.node_groups.new(name=name, type="GeometryNodeTree")
 
@@ -139,15 +145,24 @@ def build_instance_node_group(
     random_scale = group.nodes.new("FunctionNodeRandomValue")
     random_scale.location = (-330, 140)
     random_scale.data_type = 'FLOAT'
-    random_scale.inputs[2].default_value = float(settings.scale_min)
-    random_scale.inputs[3].default_value = float(settings.scale_max)
+    if fixed_scale is None:
+        random_scale.inputs[2].default_value = float(settings.scale_min)
+        random_scale.inputs[3].default_value = float(settings.scale_max)
+    else:
+        random_scale.inputs[2].default_value = float(fixed_scale)
+        random_scale.inputs[3].default_value = float(fixed_scale)
 
     random_rotation = group.nodes.new("FunctionNodeRandomValue")
     random_rotation.location = (-330, 300)
     random_rotation.data_type = 'FLOAT_VECTOR'
-    rotation_range = math.radians(float(settings.rotation_random_z))
-    random_rotation.inputs[2].default_value = (0.0, 0.0, -rotation_range)
-    random_rotation.inputs[3].default_value = (0.0, 0.0, rotation_range)
+    if fixed_rotation_z_deg is None:
+        rotation_range = math.radians(float(settings.rotation_random_z))
+        random_rotation.inputs[2].default_value = (0.0, 0.0, -rotation_range)
+        random_rotation.inputs[3].default_value = (0.0, 0.0, rotation_range)
+    else:
+        fixed_rotation = math.radians(float(fixed_rotation_z_deg))
+        random_rotation.inputs[2].default_value = (0.0, 0.0, fixed_rotation)
+        random_rotation.inputs[3].default_value = (0.0, 0.0, fixed_rotation)
 
     group.links.new(group_in.outputs[0], instance_on_points.inputs[0])
     group.links.new(collection_info.outputs[0], instance_on_points.inputs[2])
@@ -174,19 +189,26 @@ def generate_emitters(
             category_collection = create_child_collection(root_collection, layer.category)
             category_cache[layer.category] = category_collection
 
-        emitter_collection = create_child_collection(category_collection, layer.name)
         positions = [Vector((placement.x, placement.y, getattr(placement, "z", 0.0))) for placement in plan.placements]
-        emitter = create_point_mesh(f"PM_GN_{layer.name}", positions)
+        emitter_name = layer.name or layer.layer_id.split("/")[-1]
+        emitter = create_point_mesh(emitter_name, positions)
         emitter["pm_layer_id"] = layer.layer_id
         emitter["pm_category"] = layer.category
         emitter["pm_backend"] = BACKEND_NAME
         modifier = emitter.modifiers.new(name="PM_GN", type='NODES')
+        fixed_scale = None
+        fixed_rotation = None
+        if getattr(layer.settings, "mode", "procedural") == "single" and len(plan.placements) == 1:
+            fixed_scale = float(plan.placements[0].scale)
+            fixed_rotation = float(plan.placements[0].rotation_z_deg)
         modifier.node_group = build_instance_node_group(
-            name=f"PM_GN_{layer.name}_Group",
+            name=f"{emitter_name}_Group",
             asset_collection=assets[layer.layer_id],
             settings=layer.settings,
+            fixed_scale=fixed_scale,
+            fixed_rotation_z_deg=fixed_rotation,
         )
-        emitter_collection.objects.link(emitter)
+        category_collection.objects.link(emitter)
         summary.append({"layer_id": layer.layer_id, "count": len(plan.placements)})
 
     return summary
@@ -204,6 +226,7 @@ def main(argv: list[str]) -> None:
 
     layer_inputs, layer_lookup = build_layer_inputs(package.layers)
     assets = resolve_asset_collections([layer for layer in package.layers if layer.enabled])
+    apply_default_bounding_radii(layer_inputs, assets)
     map_dims = MapDimensions(
         width=package.map.width,
         height=package.map.height,
@@ -221,8 +244,8 @@ def main(argv: list[str]) -> None:
     plans = plan_generation(package.project_id, map_dims, layer_inputs, terrain_sampler=terrain_sampler)
 
     cleanup_generated_state(args.root_name)
-    root_collection = bpy.data.collections.new(args.root_name)
-    ensure_collection_linked_to_scene(root_collection)
+    rename_original_scene_content()
+    root_collection = bpy.context.scene.collection
     if package.map.terrain.enabled and package.map.terrain.heightfield_exists:
         runtime_plane = create_terrain_plane(
             package.map.width,
@@ -239,15 +262,14 @@ def main(argv: list[str]) -> None:
         )
     else:
         runtime_plane = create_runtime_plane(package.map.width, package.map.height)
-    root_collection.objects.link(runtime_plane)
-    if bpy.context.scene.collection.objects.get(runtime_plane.name) is not None:
-        bpy.context.scene.collection.objects.unlink(runtime_plane)
+    if runtime_plane.name not in root_collection.objects:
+        root_collection.objects.link(runtime_plane)
     prepare_runtime_plane_as_terrain(
         terrain_material_id=package.map.terrain_material_id,
         runtime_plane=runtime_plane,
     )
     print(f"[geometry_nodes] Plano runtime creado: {runtime_plane.name} ({package.map.width} x {package.map.height})")
-    hide_original_scene_content({root_collection.name})
+    detach_original_scene_content({runtime_plane.name})
     configure_material_viewport()
     summary = generate_emitters(runtime_plane, root_collection, plans, layer_lookup, assets)
     road_summary = ensure_roads_generated(package, root_collection, runtime_plane)

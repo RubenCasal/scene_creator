@@ -57,6 +57,10 @@ def collect_generated_objects(collection: bpy.types.Collection) -> list[bpy.type
     return [obj for obj in collection.all_objects if "pm_layer_id" in obj]
 
 
+def collect_generated_objects_from_scene() -> list[bpy.types.Object]:
+    return [obj for obj in bpy.data.objects if "pm_layer_id" in obj]
+
+
 def main(argv: list[str]) -> None:
     args = parse_args(argv)
     package = load_export_package(Path(args.project))
@@ -71,9 +75,9 @@ def main(argv: list[str]) -> None:
         generated_root_name = GENERATED_ROOT_GN_NAME
         generated_root = bpy.data.collections.get(generated_root_name)
     if generated_root is None:
-        raise RuntimeError(f"No existe la collection generada '{args.generated_root}'.")
-
-    generated_objects = collect_generated_objects(generated_root)
+        generated_objects = collect_generated_objects_from_scene()
+    else:
+        generated_objects = collect_generated_objects(generated_root)
     if not generated_objects:
         raise RuntimeError("No se encontraron objetos con metadatos generados para consolidar.")
 
@@ -102,7 +106,8 @@ def main(argv: list[str]) -> None:
 
     # Conservamos las instancias como instancias: la exportación final reagrupa los emisores/instancers
     # bajo colecciones por categoría y evita realizar geometría de forma destructiva.
-    cleanup_collection(generated_root_name)
+    if generated_root is not None:
+        cleanup_collection(generated_root_name)
 
     bpy.ops.wm.save_as_mainfile(filepath=str(output_path))
 
