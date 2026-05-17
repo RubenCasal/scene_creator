@@ -57,28 +57,6 @@ class BlenderRunner:
 
         return self._run_command(command, log_callback=log_callback)
 
-    def run_script_headless(
-        self,
-        script_path: Path,
-        script_args: Sequence[str],
-        log_callback: Callable[[str], None] | None = None,
-    ) -> dict[str, Any]:
-        if not script_path.exists():
-            raise BlenderExecutionError(f"No se encontró el script auxiliar: {script_path}")
-
-        blender_executable = self._require_blender_executable()
-
-        command = [
-            blender_executable,
-            "-b",
-            "--python",
-            str(script_path),
-            "--",
-            *[str(arg) for arg in script_args],
-        ]
-
-        return self._run_command(command, log_callback=log_callback)
-
     def open_blend_interactive(self, blend_file: Path) -> None:
         if not blend_file.exists():
             raise BlenderExecutionError(f"El archivo .blend no existe: {blend_file}")

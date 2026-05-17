@@ -183,7 +183,13 @@ class LayerMaskManagerTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temp_dir:
             package_dir = Path(temp_dir)
-            exported = manager.export_grayscale_masks(package_dir, ["vegetation/pino"])
+            snapshots = manager.capture_mask_snapshots(["vegetation/pino"])
+            exported = LayerMaskManager.export_grayscale_mask_snapshots(
+                package_dir=package_dir,
+                layer_order=["vegetation/pino"],
+                mask_snapshots=snapshots,
+                map_settings=map_settings,
+            )
             self.assertIn("vegetation/pino", exported)
 
             mask_path = package_dir / exported["vegetation/pino"]

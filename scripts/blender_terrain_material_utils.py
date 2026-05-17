@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import bpy
+from blender_generation_metadata import stamp_generated_metadata
 
 from proc_map_designer.services.terrain_material_catalog import (
     TerrainMaterialCatalogError,
@@ -47,9 +48,12 @@ def prepare_runtime_plane_as_terrain(
     terrain_material_id: str,
     runtime_plane: bpy.types.Object,
 ) -> bpy.types.Object:
-    runtime_plane["pm_layer_id"] = "terrain/base_plane"
-    runtime_plane["pm_category"] = "terrain"
-    runtime_plane["pm_backend"] = "terrain_material"
+    stamp_generated_metadata(
+        runtime_plane,
+        layer_id="terrain/base_plane",
+        category="terrain",
+        backend="terrain_material",
+    )
     runtime_plane.hide_viewport = False
     runtime_plane.hide_render = False
     runtime_plane.hide_select = False

@@ -70,6 +70,44 @@ except Exception as exc:  # pragma: no cover - optional runtime dependency path
     TerrainTab = None  # type: ignore[assignment]
     _TERRAIN_IMPORT_ERROR = exc
 
+PIPELINE_STATUS_MESSAGES = {
+    "local_validating": "Checking locally...",
+    "exporting": "Exporting...",
+    "validating": "Validating...",
+    "generating": "Generating...",
+    "finalizing": "Final export...",
+    "committed": "Design saved.",
+    "validated": "Validation completed.",
+    "completed": "Generation completed.",
+    "failed": "Pipeline failed.",
+}
+
+PIPELINE_PILL_LABELS = {
+    "idle": "Idle",
+    "local_validating": "Checking",
+    "exporting": "Exporting",
+    "validating": "Validating",
+    "generating": "Generating",
+    "finalizing": "Finalizing",
+    "committed": "Committed",
+    "validated": "Validated",
+    "completed": "Success",
+    "failed": "Failed",
+}
+
+PIPELINE_PILL_STYLES = {
+    "idle": "background:#374151; color:#9ca3af; border-radius:10px; padding:2px 8px;",
+    "local_validating": "background:#1d4ed8; color:#bfdbfe; border-radius:10px; padding:2px 8px;",
+    "exporting": "background:#1d4ed8; color:#bfdbfe; border-radius:10px; padding:2px 8px;",
+    "validating": "background:#1d4ed8; color:#bfdbfe; border-radius:10px; padding:2px 8px;",
+    "generating": "background:#1d4ed8; color:#bfdbfe; border-radius:10px; padding:2px 8px;",
+    "finalizing": "background:#1d4ed8; color:#bfdbfe; border-radius:10px; padding:2px 8px;",
+    "committed": "background:#14532d; color:#86efac; border-radius:10px; padding:2px 8px;",
+    "validated": "background:#14532d; color:#86efac; border-radius:10px; padding:2px 8px;",
+    "completed": "background:#14532d; color:#86efac; border-radius:10px; padding:2px 8px;",
+    "failed": "background:#7f1d1d; color:#fca5a5; border-radius:10px; padding:2px 8px;",
+}
+
 EXPECTED_ROOTS = {"vegetation", "building"}
 ROAD_TOOL_TREE_ID = "__road_tool__"
 DEFAULT_ROAD_SCALE = 6
@@ -380,24 +418,18 @@ class MainWindow(QMainWindow):
         logo_layout = QHBoxLayout()
         logo_layout.setContentsMargins(0, 0, 10, 0)
         logo_layout.setSpacing(10)
-        self._header_icon_logo = QLabel()
-        self._header_icon_logo.setPixmap(
-            self._load_svg_pixmap(
-                Path(__file__).resolve().parents[3] / "logo" / "icon_logo_white.svg",
-                80,
-                80,
-                preserve_aspect=True,
-            )
+        self._header_icon_logo = self._make_logo_label(
+            "icon_logo_white.svg",
+            80,
+            80,
+            preserve_aspect=True,
         )
         logo_layout.addWidget(self._header_icon_logo)
-        self._header_name_logo = QLabel()
-        self._header_name_logo.setPixmap(
-            self._load_svg_pixmap(
-                Path(__file__).resolve().parents[3] / "logo" / "name_logo_white.svg",
-                180,
-                180,
-                preserve_aspect=False,
-            )
+        self._header_name_logo = self._make_logo_label(
+            "name_logo_white.svg",
+            180,
+            180,
+            preserve_aspect=False,
         )
         logo_layout.addWidget(self._header_name_logo)
         header_layout.addLayout(logo_layout)
@@ -950,9 +982,14 @@ class MainWindow(QMainWindow):
                 density_text = (
                     f"density: {settings.density:.3f}" if settings is not None and has_content else "procedural: no mask"
                 )
-            prefix = "✓" if enabled else "✗"
+            included = enabled and has_content
+            prefix = "✓" if included else "✗"
             item = QListWidgetItem(f"{prefix} {layer_id}    {density_text}")
             item.setData(Qt.ItemDataRole.UserRole, layer_id)
+            if included:
+                item.setForeground(QColor("#22c55e"))
+            else:
+                item.setForeground(QColor("#ef4444"))
             self.painted_layers_list.addItem(item)
         self.painted_layers_list.blockSignals(False)
 
@@ -1549,18 +1586,7 @@ class MainWindow(QMainWindow):
     def _on_pipeline_state_changed(self, state: str) -> None:
         self._pipeline_state.current_stage = state
         self._refresh_pipeline_state_label()
-        status_map = {
-            "local_validating": "Checking locally...",
-            "exporting": "Exporting...",
-            "validating": "Validating...",
-            "generating": "Generating...",
-            "finalizing": "Final export...",
-            "committed": "Design saved.",
-            "validated": "Validation completed.",
-            "completed": "Generation completed.",
-            "failed": "Pipeline failed.",
-        }
-        message = status_map.get(state)
+        message = PIPELINE_STATUS_MESSAGES.get(state)
         if message:
             self.statusBar().showMessage(message)
 
@@ -1602,16 +1628,7 @@ class MainWindow(QMainWindow):
         self._pipeline_thread = None
         self._pipeline_worker = None
         self._current_pipeline_operation = None
-        if self.statusBar().currentMessage() in {
-                "Checking locally...",
-                "Exporting...",
-                "Validating...",
-                "Generating...",
-                "Final export...",
-                "Design saved.",
-                "Validation completed.",
-                "Generation completed.",
-        }:
+        if self.statusBar().currentMessage() in set(PIPELINE_STATUS_MESSAGES.values()) - {"Pipeline failed."}:
             self.statusBar().showMessage("Ready.")
 
     def _set_pipeline_running(self, is_busy: bool, stage: str) -> None:
@@ -2171,6 +2188,18 @@ class MainWindow(QMainWindow):
     def _load_svg_icon(self, svg_path: Path, size: int) -> QIcon:
         return QIcon(self._load_svg_pixmap(svg_path, size, size))
 
+    def _make_logo_label(self, filename: str, width: int, height: int, *, preserve_aspect: bool) -> QLabel:
+        label = QLabel()
+        label.setPixmap(
+            self._load_svg_pixmap(
+                Path(__file__).resolve().parents[3] / "logo" / filename,
+                width,
+                height,
+                preserve_aspect=preserve_aspect,
+            )
+        )
+        return label
+
     def _refresh_header_bar(self) -> None:
         project_name = self._project_file_path.name if self._project_file_path else "Unsaved project"
         self._header_project_name.setText(project_name)
@@ -2178,33 +2207,9 @@ class MainWindow(QMainWindow):
         self._header_map_info.setText(
             f"{settings.logical_width:.0f}×{settings.logical_height:.0f}{settings.logical_unit} · {settings.mask_width}px · {settings.terrain_material_id}"
         )
-        labels = {
-            "idle": "Idle",
-            "local_validating": "Checking",
-            "exporting": "Exporting",
-            "validating": "Validating",
-            "generating": "Generating",
-            "finalizing": "Finalizing",
-            "committed": "Committed",
-            "validated": "Validated",
-            "completed": "Success",
-            "failed": "Failed",
-        }
-        pill_styles = {
-            "idle": "background:#374151; color:#9ca3af; border-radius:10px; padding:2px 8px;",
-            "local_validating": "background:#1d4ed8; color:#bfdbfe; border-radius:10px; padding:2px 8px;",
-            "exporting": "background:#1d4ed8; color:#bfdbfe; border-radius:10px; padding:2px 8px;",
-            "validating": "background:#1d4ed8; color:#bfdbfe; border-radius:10px; padding:2px 8px;",
-            "generating": "background:#1d4ed8; color:#bfdbfe; border-radius:10px; padding:2px 8px;",
-            "finalizing": "background:#1d4ed8; color:#bfdbfe; border-radius:10px; padding:2px 8px;",
-            "committed": "background:#14532d; color:#86efac; border-radius:10px; padding:2px 8px;",
-            "validated": "background:#14532d; color:#86efac; border-radius:10px; padding:2px 8px;",
-            "completed": "background:#14532d; color:#86efac; border-radius:10px; padding:2px 8px;",
-            "failed": "background:#7f1d1d; color:#fca5a5; border-radius:10px; padding:2px 8px;",
-        }
         stage = self._pipeline_state.current_stage
-        self._header_pipeline_pill.setText(labels.get(stage, stage))
-        self._header_pipeline_pill.setStyleSheet(pill_styles.get(stage, pill_styles["idle"]))
+        self._header_pipeline_pill.setText(PIPELINE_PILL_LABELS.get(stage, stage))
+        self._header_pipeline_pill.setStyleSheet(PIPELINE_PILL_STYLES.get(stage, PIPELINE_PILL_STYLES["idle"]))
         latest_output = self._project_state.latest_output
         if latest_output is None:
             output_text = "No output yet"

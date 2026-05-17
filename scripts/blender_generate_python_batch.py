@@ -15,6 +15,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from blender_collection_utils import find_collection_by_path
+from blender_generation_metadata import stamp_generated_metadata
 from blender_road_utils import ensure_roads_generated
 from blender_script_utils import bootstrap_src_path, emit_json
 from blender_terrain_utils import create_terrain_plane, displace_terrain_from_heightfield
@@ -144,6 +145,10 @@ def detach_original_scene_content(visible_root_names: set[str]) -> None:
         if obj.name in visible_root_names:
             continue
         scene_root.objects.unlink(obj)
+
+
+def category_cache_names(root_collection: bpy.types.Collection) -> set[str]:
+    return {child.name for child in root_collection.children if child.get("pm_generated_category")}
 
 
 def rename_original_scene_content(prefix: str = "__SRC__") -> None:
@@ -312,9 +317,12 @@ def generate_instances(
             obj.rotation_mode = 'XYZ'
             obj.rotation_euler = rotation
             obj.scale = (placement.scale, placement.scale, placement.scale)
-            obj["pm_layer_id"] = layer_id
-            obj["pm_category"] = definition.category
-            obj["pm_backend"] = BACKEND_NAME
+            stamp_generated_metadata(
+                obj,
+                layer_id=layer_id,
+                category=definition.category,
+                backend=BACKEND_NAME,
+            )
 
             category_collection.objects.link(obj)
             placed += 1
@@ -384,7 +392,6 @@ def main(argv: list[str]) -> None:
         runtime_plane=runtime_plane,
     )
     print(f"[python_batch] Plano runtime creado: {runtime_plane.name} ({package.map.width} x {package.map.height})")
-    detach_original_scene_content({runtime_plane.name})
     configure_material_viewport()
 
     summary = generate_instances(plans, layer_lookup, asset_collections, runtime_plane, root_collection)
@@ -392,6 +399,8 @@ def main(argv: list[str]) -> None:
     combined_summary = summary + road_summary
     for entry in combined_summary:
         print(f"[python_batch] {entry['layer_id']}: {entry['count']} instancias")
+
+    detach_original_scene_content({runtime_plane.name, *category_cache_names(root_collection)})
 
     bpy.ops.wm.save_as_mainfile(filepath=str(output_path))
     print(f"[python_batch] Archivo guardado: {output_path}")

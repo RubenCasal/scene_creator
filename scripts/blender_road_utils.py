@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import bpy
+from blender_generation_metadata import stamp_generated_metadata
 
 MATERIAL_RE = re.compile(r'Material\("([^"]+)"\)')
 ROAD_MATERIAL_NAMES = ("Road", "Borders", "Rail", "Sidewalk")
@@ -50,6 +51,7 @@ def ensure_roads_generated(
         return []
 
     roads_collection = bpy.data.collections.new("roads")
+    roads_collection["pm_generated_category"] = True
     root_collection.children.link(roads_collection)
     summary: list[dict[str, Any]] = []
     for index, road in enumerate(visible_roads, start=1):
@@ -150,9 +152,12 @@ def create_road_curve_object(road, runtime_plane: bpy.types.Object, index: int) 
     obj.location = tuple(runtime_location)
     obj.rotation_mode = 'XYZ'
     obj.rotation_euler = (0.0, 0.0, 0.0)
-    obj["pm_layer_id"] = road.road_id
-    obj["pm_category"] = "road"
-    obj["pm_backend"] = "geometry_nodes_road"
+    stamp_generated_metadata(
+        obj,
+        layer_id=road.road_id,
+        category="road",
+        backend="geometry_nodes_road",
+    )
     return obj
 
 

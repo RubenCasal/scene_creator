@@ -15,6 +15,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from blender_collection_utils import find_collection_by_path
+from blender_generation_metadata import stamp_generated_metadata
 from blender_road_utils import ensure_roads_generated
 from blender_script_utils import bootstrap_src_path, emit_json
 from blender_terrain_utils import create_terrain_plane, displace_terrain_from_heightfield
@@ -28,6 +29,7 @@ from proc_map_designer.blender_bridge.terrain_sampler import TerrainSampler
 from proc_map_designer.blender_bridge.package_loader import ExportLayerDefinition, load_export_package
 from blender_generate_python_batch import (
     apply_default_bounding_radii,
+    category_cache_names,
     configure_material_viewport,
     create_runtime_plane,
     cleanup_generated_state,
@@ -192,9 +194,12 @@ def generate_emitters(
         positions = [Vector((placement.x, placement.y, getattr(placement, "z", 0.0))) for placement in plan.placements]
         emitter_name = layer.name or layer.layer_id.split("/")[-1]
         emitter = create_point_mesh(emitter_name, positions)
-        emitter["pm_layer_id"] = layer.layer_id
-        emitter["pm_category"] = layer.category
-        emitter["pm_backend"] = BACKEND_NAME
+        stamp_generated_metadata(
+            emitter,
+            layer_id=layer.layer_id,
+            category=layer.category,
+            backend=BACKEND_NAME,
+        )
         modifier = emitter.modifiers.new(name="PM_GN", type='NODES')
         fixed_scale = None
         fixed_rotation = None
@@ -269,13 +274,14 @@ def main(argv: list[str]) -> None:
         runtime_plane=runtime_plane,
     )
     print(f"[geometry_nodes] Plano runtime creado: {runtime_plane.name} ({package.map.width} x {package.map.height})")
-    detach_original_scene_content({runtime_plane.name})
     configure_material_viewport()
     summary = generate_emitters(runtime_plane, root_collection, plans, layer_lookup, assets)
     road_summary = ensure_roads_generated(package, root_collection, runtime_plane)
     combined_summary = summary + road_summary
     for entry in combined_summary:
         print(f"[geometry_nodes] {entry['layer_id']}: {entry['count']} puntos emisores")
+
+    detach_original_scene_content({runtime_plane.name, *category_cache_names(root_collection)})
 
     bpy.ops.wm.save_as_mainfile(filepath=str(output_path))
     print(f"[geometry_nodes] Archivo guardado: {output_path}")

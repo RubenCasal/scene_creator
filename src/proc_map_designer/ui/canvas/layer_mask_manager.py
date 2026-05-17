@@ -261,15 +261,6 @@ class LayerMaskManager:
     def content_layer_ids(self) -> list[str]:
         return [layer_id for layer_id in self._order if self.has_layer_content(layer_id)]
 
-    def export_grayscale_masks(self, package_dir: Path, layer_order: list[str]) -> dict[str, str]:
-        snapshots = self.capture_mask_snapshots(layer_order)
-        return self.export_grayscale_mask_snapshots(
-            package_dir=package_dir,
-            layer_order=layer_order,
-            mask_snapshots=snapshots,
-            map_settings=self._map_settings,
-        )
-
     def capture_mask_snapshots(self, layer_order: list[str]) -> dict[str, QImage]:
         snapshots: dict[str, QImage] = {}
         for layer_id in layer_order:
